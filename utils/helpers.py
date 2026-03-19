@@ -164,126 +164,133 @@ def show_high_stock_alert(df, location, threshold=50):
         else:
             st.success(f"No items in {location} exceed {threshold} units")
 
-def sync_inventory(location_name, supabase):
+def sync_inventory(location_name):
     try:
-        st.sidebar.info(f"🔄 Starting sync for {location_name}...")
-        progress = st.progress(0)
-
         # --- Get Square locations ---
-        locs = square_client.locations.list()
-        if locs.errors:
-            st.sidebar.error(f"❌ Square error: {locs.errors}")
-            return False
+        locations_response = square_client.locations.list()
+        location_lookup = {loc.id: (loc.name or "") for loc in locations_response.locations}
 
-        # Find matching Square location ID
-        location_id = None
-        for loc in locs.body["locations"]:
-            if (loc.get("name") or "").strip() == location_name.strip():
-                location_id = loc["id"]
-                break
+        # --- Map normalized name back to Square’s actual name ---
+        square_name = LOCATION_MAP.get(location_name, location_name or "Unknown")
+        square_name = (square_name or "").strip()
+
+        # --- Find matching Square location ID ---
+        location_id = next(
+            (lid for lid, lname in location_lookup.items() if (lname or "").strip() == square_name),
+            None
+        )
         if not location_id:
-            st.sidebar.error(f"❌ Location '{location_name}' not found in Square.")
-            return False
+            st.sidebar.error(f"❌ Location '{square_name}' not found in Square.")
+            return
 
+        # --- Get last MISE time ---
+        last_mise = supabase.table("sync_log") \
+            .select("synced_at") \
+            .eq("location", location_name) \
+            .eq("type", "MISE") \
+            .order("synced_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        last_mise_time = None
+        if last_mise.data:
+            synced_at = last_mise.data[0].get("synced_at")
+            if synced_at:
+                last_mise_time = datetime.fromisoformat(synced_at).astimezone(haiti_tz)
+
+        # --- Get last SSD time ---
+        last_ssd = supabase.table("sync_log") \
+            .select("synced_at") \
+            .eq("location", location_name) \
+            .eq("type", "SSD") \
+            .order("synced_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        last_ssd_time = None
+        if last_ssd.data:
+            synced_at = last_ssd.data[0].get("synced_at")
+            if synced_at:
+                last_ssd_time = datetime.fromisoformat(synced_at).astimezone(haiti_tz)
+
+        # --- Determine cutoff time ---
+        cutoff_time = last_ssd_time if last_ssd_time else last_mise_time
+
+        # --- Progress bar for SSD ---
+        progress = st.progress(0)
         progress.progress(20)
 
-        # --- Pull inventory counts (new logic) ---
-        inv_res = square_client.inventory.batch_retrieve_inventory_counts(
-            body={"location_ids": [location_id]}
-        )
-        if inv_res.errors:
-            st.sidebar.error(f"❌ Square inventory error: {inv_res.errors}")
-            return False
-
-        counts = inv_res.body.get("counts", [])
-        df = pd.DataFrame(counts)
-        if not df.empty:
-            df["Location"] = location_name
-            df = df.rename(columns={
-                "catalog_object_id": "square_item_id",
-                "quantity": "Stock"
-            })
-            df["Stock"] = pd.to_numeric(df["Stock"], errors="coerce").fillna(0).astype(int)
-            df["Price"] = 0.0
-            df["Category"] = "Uncategorized"
-            df["Token"] = "NO_TOKEN"
-            df["Full Name"] = df["square_item_id"]
-
-            records = df[["Full Name","Category","Stock","Price","Location","Token","square_item_id"]].to_dict(orient="records")
-            supabase.table("Master_Inventory").upsert(records).execute()
-
+        # --- Fetch orders for this location ---
+        response = square_client.orders.search(location_ids=[location_id], limit=200)
         progress.progress(40)
 
-        # --- Order‑based sync (old logic) ---
-        # Get last sync times
-        last_ssd = supabase.table("sync_log").select("synced_at").eq("location", location_name).eq("type","SSD").order("synced_at", desc=True).limit(1).execute()
-        last_mise = supabase.table("sync_log").select("synced_at").eq("location", location_name).eq("type","MISE").order("synced_at", desc=True).limit(1).execute()
+        if response.orders:
+            updates = []
+            for order in response.orders:
+                created_dt = datetime.fromisoformat(order.created_at.replace("Z", "+00:00")).astimezone(haiti_tz)
 
-        cutoff_time = None
-        for res in (last_ssd, last_mise):
-            if res.data:
-                synced_at = res.data[0].get("synced_at")
-                if synced_at:
-                    cutoff_time = datetime.fromisoformat(synced_at).astimezone(haiti_tz)
-                    break
-
-        progress.progress(50)
-
-        # Fetch orders
-        orders_res = square_client.orders.search(location_ids=[location_id], limit=200)
-        if orders_res.errors:
-            st.sidebar.error(f"❌ Square orders error: {orders_res.errors}")
-            return False
-
-        updates = []
-        if orders_res.body.get("orders"):
-            for order in orders_res.body["orders"]:
-                created_dt = datetime.fromisoformat(order["created_at"].replace("Z","+00:00")).astimezone(haiti_tz)
+                # ✅ Only process orders created AFTER cutoff
                 if cutoff_time and created_dt <= cutoff_time:
                     continue
 
-                if order.get("line_items"):
-                    for item in order["line_items"]:
-                        qty_sold = int(item["quantity"])
-                        product_name = (item.get("name") or "").strip()
-                        product_token = (item.get("catalog_object_id") or "").strip()
+                if order.line_items:
+                    for item in order.line_items:
+                        qty_sold = int(item.quantity)
+                        product_name = (item.name or "").strip()
+                        product_token = (item.catalog_object_id or "").strip()
 
-                        # Update inventory stock
+                        # --- Lookup category/location from Master_Inventory ---
+                        category = "Uncategorized"
+                        inv_result = supabase.table("Master_Inventory").select("Category, Location").eq("Token", product_token).execute()
+                        if inv_result.data:
+                            category = inv_result.data[0].get("Category", "Uncategorized")
+                        elif product_name:
+                            inv_result = supabase.table("Master_Inventory").select("Category, Location").eq("Full Name", product_name).execute()
+                            if inv_result.data:
+                                category = inv_result.data[0].get("Category", "Uncategorized")
+
+                        # ✅ Update inventory stock
                         current = supabase.table("Master_Inventory").select("Stock").eq("Token", product_token).execute()
                         if current.data:
                             new_qty = current.data[0]["Stock"] - qty_sold
                             supabase.table("Master_Inventory").update({"Stock": new_qty}).eq("Token", product_token).execute()
+                        else:
+                            if product_name:
+                                current = supabase.table("Master_Inventory").select("Stock").eq("Full Name", product_name).execute()
+                                if current.data:
+                                    new_qty = current.data[0]["Stock"] - qty_sold
+                                    supabase.table("Master_Inventory").update({"Stock": new_qty}).eq("Full Name", product_name).execute()
 
-                        # Log sale
+                        # ✅ Log into Sales table with upsert
                         supabase.table("Sales").upsert({
-                            "order_id": order["id"],
+                            "order_id": order.id,
                             "location": location_name,
                             "product_token": product_token if product_token else None,
                             "product_name": product_name,
                             "quantity": qty_sold,
-                            "unit_price": float(item["base_price_money"]["amount"]) / 100 if item.get("base_price_money") else None,
-                            "total_amount": float(item["total_money"]["amount"]) / 100 if item.get("total_money") else None,
-                            "category": "Uncategorized",
-                            "state": order.get("state"),
+                            "unit_price": float(item.base_price_money.amount) / 100 if item.base_price_money else None,
+                            "total_amount": float(item.total_money.amount) / 100 if item.total_money else None,
+                            "category": category,
+                            "state": order.state,
                             "created_at": created_dt.isoformat(),
                             "updated_at": datetime.now(haiti_tz).isoformat()
                         }, on_conflict=["order_id","product_token"]).execute()
 
-                updates.append(order["id"])
+                updates.append(order.id)
 
-        progress.progress(80)
+            progress.progress(80)
 
-        # --- Log sync ---
-        supabase.table("sync_log").insert({
-            "location": location_name,
-            "synced_at": datetime.now(haiti_tz).isoformat(),
-            "type": "SSD"
-        }).execute()
-
-        progress.progress(100)
-        st.sidebar.success(f"✅ {location_name}: Inventory synced ({len(updates)} new orders, {len(counts)} items updated).")
-        return True
+            if updates:
+                st.sidebar.success(f"✅ {location_name}: Inventory updated from {len(updates)} new orders")
+                supabase.table("sync_log").insert({
+                    "location": location_name,
+                    "synced_at": datetime.now(haiti_tz).isoformat(),
+                    "type": "SSD"
+                }).execute()
+            progress.progress(100)
+        else:
+            st.sidebar.info(f"No new orders found for {location_name}.")
+            progress.progress(100)
 
     except Exception as e:
-        st.sidebar.error(f"❌ Error syncing {location_name}: {e}")
-        return False
+        st.sidebar.error(f"Error syncing {location_name}: {e}")

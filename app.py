@@ -13,7 +13,7 @@ from tabs import library, arrival, inventory, depot, mannequin, compare, transfe
 st.set_page_config(page_title="DressUpHT Stock System", layout="wide")
 
 # Load favicon from local file
-with open("favicon.ico", "rb") as f:
+with open("favicon.png", "rb") as f:
     favicon_data = f.read()
 favicon_base64 = base64.b64encode(favicon_data).decode()
 

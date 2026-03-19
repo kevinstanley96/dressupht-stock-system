@@ -7,10 +7,9 @@ from square import Square
 
 haiti_tz = timezone("America/Port-au-Prince")
 
-# Initialize Square client once
-square_client = Client(
+square_client = Square(
     access_token="YOUR_SQUARE_ACCESS_TOKEN",
-    environment="production"   # or "sandbox" if testing
+    environment="production"   # or "sandbox" if you’re testing
 )
 
 # --- LOGIN ---

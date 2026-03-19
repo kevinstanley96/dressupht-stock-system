@@ -11,8 +11,8 @@ from tabs import library, arrival, inventory, depot, mannequin, compare, transfe
 # --- App Setup ---
 st.set_page_config(page_title="DressUpHT Stock System", layout="wide")
 
-# Choose language (default English)
-language = st.sidebar.selectbox("🌐 Language", ["en","fr"], index=0)
+# --- Language Selector ---
+language = st.sidebar.selectbox("🌐 Language", ["en", "fr"], index=0)
 t = get_translations(language)
 
 # --- Authentication ---
@@ -23,15 +23,14 @@ if not user_info:
 username, role, location = user_info
 loc_list = get_allowed_locations(supabase, username)
 
-st.sidebar.success(f"Logged in as {username} ({role})")
-
+# --- Sidebar (operational only, no login info) ---
 with st.sidebar:
-    render_sidebar(username, role, loc_list, supabase)
+    render_sidebar(role, supabase)
 
 # --- Tab Layout ---
 tab_dict = st.tabs([
-    "Library","Arrival","Inventory","Depot","Mannequin",
-    "Compare","Transfer","Sales","Admin","Password"
+    "Library", "Arrival", "Inventory", "Depot", "Mannequin",
+    "Compare", "Transfer", "Sales", "Admin", "Password"
 ])
 
 # --- Render Tabs ---

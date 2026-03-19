@@ -11,7 +11,7 @@ def render_sidebar(username, role, loc_list, supabase):
     last_syncs = supabase.table("sync_log") \
         .select("location, synced_at, type") \
         .order("synced_at", desc=True) \
-        .limit(5) \
+        .limit(2) \
         .execute()
 
     if last_syncs.data:
@@ -46,9 +46,12 @@ def render_sidebar(username, role, loc_list, supabase):
                 combined_df = clean_and_combine(file_cv, file_pv)
                 progress.progress(40)
 
-                # 🔧 Drop unwanted columns
-                if "Unnamed: 0" in combined_df.columns:
-                    combined_df = combined_df.drop(columns=["Unnamed: 0"])
+                # 🔧 Drop unwanted columns like 'Unnamed: 0'
+                drop_cols = [c for c in combined_df.columns if c not in [
+                    "SKU", "Full Name", "Category", "Stock", "Price", "Location", "Token", "square_item_id"
+                ]]
+                if drop_cols:
+                    combined_df = combined_df.drop(columns=drop_cols)
 
                 # Replace NaN with None
                 combined_df = combined_df.where(pd.notnull(combined_df), None)
@@ -85,12 +88,6 @@ def render_sidebar(username, role, loc_list, supabase):
         sync_inventory("Dressupht Pv", supabase)
     if st.button("Sync Inventory - Canape-Vert"):
         sync_inventory("Canape-Vert", supabase)
-
-    sync_log = supabase.table("sync_log").select("*").order("synced_at", desc=True).limit(5).execute()
-    if sync_log.data:
-        st.subheader("🕒 Last Syncs")
-        for row in sync_log.data:
-            st.write(f"{row['location']}: {row['synced_at']}")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):

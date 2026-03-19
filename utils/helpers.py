@@ -8,28 +8,43 @@ haiti_tz = timezone("America/Port-au-Prince")
 
 # --- LOGIN ---
 def login_user(supabase):
-    """Authenticate user against Supabase user_roles_locations table."""
-    st.sidebar.subheader("🔑 Login")
-    username = st.sidebar.text_input("Username")
-    password = st.sidebar.text_input("Password", type="password")
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+        st.session_state.username = None
+        st.session_state.role = None
+        st.session_state.location = None
 
-    if st.sidebar.button("Login"):
-        try:
-            result = supabase.table("user_roles_locations") \
-                             .select("*") \
-                             .eq("user_name", username) \
-                             .eq("password", password) \
-                             .execute()
-            if result.data:
-                user = result.data[0]
-                return user["user_name"], user["role"], user["location"]
-            else:
-                st.sidebar.error("Invalid credentials.")
+    if not st.session_state.authenticated:
+        st.title("🔑 Login")
+        username_input = st.text_input("Username")
+        password_input = st.text_input("Password", type="password")
+
+        if st.button("Login"):
+            result = supabase.table("user_roles_locations").select("*").eq("user_name", username_input).execute()
+            if not result.data:
+                st.error("Invalid username")
                 return None
-        except Exception as e:
-            st.sidebar.error(f"Login error: {e}")
-            return None
-    return None
+
+            user = result.data[0]
+            stored_pw = user.get("password")
+
+            if stored_pw and password_input == stored_pw:
+                st.success(f"Welcome {user['user_name']}!")
+                st.session_state.authenticated = True
+                st.session_state.username = user["user_name"]
+                st.session_state.role = user["role"]
+                st.session_state.location = user["location"]
+                st.rerun()
+            else:
+                st.error("Invalid password")
+
+        return None
+    else:
+        return (
+            st.session_state.username,
+            st.session_state.role,
+            st.session_state.location,
+        )
 
 # --- LOCATION ACCESS ---
 def get_allowed_locations(supabase, username):

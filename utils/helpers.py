@@ -6,6 +6,12 @@ from pytz import timezone
 
 haiti_tz = timezone("America/Port-au-Prince")
 
+# Initialize Square client once
+square_client = Client(
+    access_token="YOUR_SQUARE_ACCESS_TOKEN",
+    environment="production"   # or "sandbox" if testing
+)
+
 # --- LOGIN ---
 def login_user(supabase):
     if "authenticated" not in st.session_state:
@@ -147,75 +153,61 @@ def show_high_stock_alert(df, location, threshold=50):
         else:
             st.success(f"No items in {location} exceed {threshold} units")
 
-def sync_inventory(supabase, square_client):
-    """
-    Sync Square orders with Supabase Master_Inventory.
-    - Uses Option 3: always resolve Token at sync time.
-    - Logs each sale into Supabase Sales table for audit.
-    """
+def sync_inventory(location_name, supabase):
     try:
-        # Get Square locations
-        locations_response = square_client.locations.list()
-        location_lookup = {loc.id: loc.name for loc in locations_response.locations}
-        location_ids = list(location_lookup.keys())
+        # --- Fetch inventory from Square ---
+        # Get all locations from Square
+        locs = square_client.locations.list_locations()
+        if locs.is_error():
+            raise Exception(f"Square error: {locs.errors}")
 
-        # Fetch recent orders
-        response = square_client.orders.search(location_ids=location_ids, limit=200)
-        if not response.orders:
-            return []
+        # Find the matching Square location
+        location_id = None
+        for loc in locs.body["locations"]:
+            if loc["name"] == location_name:
+                location_id = loc["id"]
+                break
+        if not location_id:
+            raise Exception(f"Location {location_name} not found in Square")
 
-        today = datetime.now(haiti_tz).date()
-        synced_sales = []
+        # Pull inventory counts for that location
+        inv_res = square_client.inventory.batch_retrieve_inventory_counts(
+            body={"location_ids": [location_id]}
+        )
+        if inv_res.is_error():
+            raise Exception(f"Square inventory error: {inv_res.errors}")
 
-        for order in response.orders:
-            created_dt = datetime.fromisoformat(order.created_at.replace("Z","+00:00")).astimezone(haiti_tz)
-            if created_dt.date() != today:
-                continue
+        counts = inv_res.body["counts"]
 
-            if order.line_items:
-                for item in order.line_items:
-                    qty_sold = int(item.quantity)
-                    product_name = item.name or ""
-                    product_token = item.catalog_object_id
+        # --- Transform into DataFrame ---
+        df = pd.DataFrame(counts)
+        df["Location"] = location_name
+        # Map Square fields to your schema
+        df = df.rename(columns={
+            "catalog_object_id": "square_item_id",
+            "quantity": "Stock"
+        })
+        df["Stock"] = pd.to_numeric(df["Stock"], errors="coerce").fillna(0).astype(int)
+        df["Price"] = 0.0  # Square inventory counts don’t include price; fill later if needed
+        df["Category"] = "Uncategorized"
+        df["Token"] = "NO_TOKEN"
+        df["Full Name"] = df["square_item_id"]  # placeholder if no name field
 
-                    # Default values
-                    token = "NO_TOKEN"
-                    category = "Unknown"
-                    location_name = location_lookup.get(order.location_id,"Unknown")
+        records = df[["SKU","Full Name","Category","Stock","Price","Location","Token","square_item_id"]].to_dict(orient="records")
 
-                    # Option 3: resolve Token at sync time
-                    inv_result = supabase.table("Master_Inventory").select("Full Name, SKU, Category, Location, Token").eq("Token", product_token).execute()
-                    if inv_result.data:
-                        inv_info = inv_result.data[0]
-                        category = inv_info["Category"]
-                        location_name = inv_info["Location"]
-                        token = inv_info["Token"]
-                    else:
-                        # fallback by product name
-                        if product_name.strip():
-                            inv_result = supabase.table("Master_Inventory").select("Full Name, SKU, Category, Location, Token").eq("Full Name", product_name.strip()).execute()
-                            if inv_result.data:
-                                inv_info = inv_result.data[0]
-                                category = inv_info["Category"]
-                                location_name = inv_info["Location"]
-                                token = inv_info["Token"] or "NO_TOKEN"
+        # --- Save to Supabase ---
+        supabase.table("Master_Inventory").upsert(records).execute()
 
-                    sale_entry = {
-                        "date": created_dt.strftime("%Y-%m-%d"),
-                        "time": created_dt.strftime("%H:%M:%S"),
-                        "location": location_name,
-                        "category": category,
-                        "product": f"{qty_sold} × {product_name if product_name else 'Unknown'}",
-                        "token": token,
-                        "state": order.state
-                    }
+        # --- Log sync ---
+        now_ht = datetime.now(haiti_tz).isoformat()
+        supabase.table("sync_log").insert({
+            "location": location_name,
+            "synced_at": now_ht,
+            "type": "AUTO"
+        }).execute()
 
-                    # Insert into Supabase Sales table
-                    supabase.table("Sales").insert(sale_entry).execute()
-                    synced_sales.append(sale_entry)
-
-        return synced_sales
+        return True
 
     except Exception as e:
-        st.error(f"Error syncing inventory: {e}")
-        return []
+        print(f"Error syncing inventory: {e}")
+        return False

@@ -2,10 +2,12 @@ import streamlit as st
 from supabase import create_client, Client
 import os
 
+@st.cache_resource
 def init_connection() -> Client:
     """
     Initialize and return a Supabase client.
     Reads credentials from Streamlit secrets or environment variables.
+    Cached so the client is reused across reruns.
     """
     try:
         # Prefer Streamlit secrets

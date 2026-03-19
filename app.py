@@ -17,6 +17,17 @@ st.set_page_config(
     layout="wide"
 )
 
+# Hide only GitHub and Fork icons
+hide_github_fork = """
+    <style>
+    /* Hide GitHub icon */
+    .stGithubIcon {display: none !important;}
+    /* Hide Fork button */
+    .stAppDeployButton {display: none !important;}
+    </style>
+"""
+st.markdown(hide_github_fork, unsafe_allow_html=True)
+
 # --- Sidebar: Language selector only ---
 language = st.sidebar.selectbox("🌐 Language / Langue", ["en", "fr"], index=0)
 t = get_translations(language)

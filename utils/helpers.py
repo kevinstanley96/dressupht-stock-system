@@ -191,7 +191,7 @@ def sync_inventory(location_name, supabase):
         inv_res = square_client.inventory.batch_retrieve_inventory_counts(
             body={"location_ids": [location_id]}
         )
-        if inv_res.is_error():
+        if inv_res.errors:
             st.sidebar.error(f"❌ Square inventory error: {inv_res.errors}")
             return False
 
@@ -231,7 +231,7 @@ def sync_inventory(location_name, supabase):
 
         # Fetch orders
         orders_res = square_client.orders.search(location_ids=[location_id], limit=200)
-        if orders_res.is_error():
+        if orders_res.errors:
             st.sidebar.error(f"❌ Square orders error: {orders_res.errors}")
             return False
 

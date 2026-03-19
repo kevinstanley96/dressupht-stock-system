@@ -43,6 +43,21 @@ def get_allowed_locations(supabase, username):
     except Exception:
         return []
 
+def clean_and_combine(file_cv, file_pv):
+    """
+    Read two uploaded Excel files, clean them, and return a combined DataFrame.
+    Adjust cleaning logic as needed for your schema.
+    """
+    df_cv = pd.read_excel(file_cv)
+    df_pv = pd.read_excel(file_pv)
+
+    # Example cleaning: strip whitespace, unify column names
+    df_cv.columns = [c.strip() for c in df_cv.columns]
+    df_pv.columns = [c.strip() for c in df_pv.columns]
+
+    combined_df = pd.concat([df_cv, df_pv], ignore_index=True)
+    return combined_df
+
 # --- SAFE DATAFRAME DISPLAY ---
 def safe_dataframe(df, cols, empty_msg="No data available."):
     """Safely display a dataframe with selected columns."""

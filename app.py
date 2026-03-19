@@ -12,6 +12,16 @@ from tabs import library, arrival, inventory, depot, mannequin, compare, transfe
 # --- App Setup ---
 st.set_page_config(page_title="DressUpHT Stock System", layout="wide")
 
+# Load favicon from local file
+with open("favicon.ico", "rb") as f:
+    favicon_data = f.read()
+favicon_base64 = base64.b64encode(favicon_data).decode()
+
+favicon_html = f"""
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,{favicon_base64}">
+"""
+st.markdown(favicon_html, unsafe_allow_html=True)
+
 # --- Sidebar: Language selector only ---
 language = st.sidebar.selectbox("🌐 Language / Langue", ["en", "fr"], index=0)
 t = get_translations(language)

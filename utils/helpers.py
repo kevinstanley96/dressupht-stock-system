@@ -171,7 +171,7 @@ def sync_inventory(location_name, supabase):
 
         # --- Get Square locations ---
         locs = square_client.locations.list()
-        if locs.is_error():
+        if locs.errors:
             st.sidebar.error(f"❌ Square error: {locs.errors}")
             return False
 

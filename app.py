@@ -1,65 +1,43 @@
 import streamlit as st
-import pandas as pd
 from utils.supabase_client import supabase
 from utils.square_client import square_client
-from utils.translations import translations
 from utils.helpers import login_user, get_allowed_locations
+from utils.translations import get_translations
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Dressup Haiti Stock", layout="wide")
-
-# --- LANGUAGE SELECTOR ---
-lang = st.sidebar.selectbox("🌐 Language / Langue", ["en", "fr"])
-t = translations[lang]
-
-# --- LOGIN ---
-login_result = login_user(supabase)
-if not login_result or login_result[0] is None:
-    st.stop()
-
-username, role, location = login_result
-loc_list = get_allowed_locations(supabase, username)
-
-# --- ROLE-BASED TABS ---
-role_tabs = {
-    "Staff":   ["Library", "Mannequin", "Password"],
-    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Password"],
-    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Password"]
-}
-tab_list = role_tabs.get(role, ["Library", "Password"])
-tabs = st.tabs(tab_list)
-tab_dict = {name: tabs[i] for i, name in enumerate(tab_list)}
-
-# --- IMPORT TAB MODULES ---
+# Import all tab modules
 from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password
 
-# --- RENDER EACH TAB ---
-if "Library" in tab_dict:
-    library.render_tab(tab_dict["Library"], supabase, username, role, loc_list, t)
+# --- App Setup ---
+st.set_page_config(page_title="DressUpHT Stock System", layout="wide")
 
-if "Arrival" in tab_dict:
-    arrival.render_tab(tab_dict["Arrival"], supabase, username, role, loc_list, t)
+# Choose language (default English)
+language = st.sidebar.selectbox("🌐 Language", ["en","fr"], index=0)
+t = get_translations(language)
 
-if "Inventory" in tab_dict:
-    inventory.render_tab(tab_dict["Inventory"], supabase, username, role, loc_list, t)
+# --- Authentication ---
+user_info = login_user(supabase)
+if not user_info:
+    st.stop()
 
-if "Depot" in tab_dict:
-    depot.render_tab(tab_dict["Depot"], supabase, username, role, loc_list, t)
+username, role, location = user_info
+loc_list = get_allowed_locations(supabase, username)
 
-if "Mannequin" in tab_dict:
-    mannequin.render_tab(tab_dict["Mannequin"], supabase, username, role, loc_list, t)
+st.sidebar.success(f"Logged in as {username} ({role})")
 
-if "Compare" in tab_dict:
-    compare.render_tab(tab_dict["Compare"], supabase, username, role, loc_list, t)
+# --- Tab Layout ---
+tab_dict = st.tabs([
+    "Library","Arrival","Inventory","Depot","Mannequin",
+    "Compare","Transfer","Sales","Admin","Password"
+])
 
-if "Transfer" in tab_dict:
-    transfer.render_tab(tab_dict["Transfer"], supabase, username, role, loc_list, t)
-
-if "Sales" in tab_dict:
-    sales.render_tab(tab_dict["Sales"], supabase, username, role, loc_list, t)
-
-if "Admin" in tab_dict:
-    admin.render_tab(tab_dict["Admin"], supabase, username, role, loc_list, t)
-
-if "Password" in tab_dict:
-    password.render_tab(tab_dict["Password"], supabase, username, role, loc_list, t)
+# --- Render Tabs ---
+library.render_tab(tab_dict[0], supabase, username, role, loc_list, t)
+arrival.render_tab(tab_dict[1], supabase, username, role, loc_list, t)
+inventory.render_tab(tab_dict[2], supabase, username, role, loc_list, t)
+depot.render_tab(tab_dict[3], supabase, username, role, loc_list, t)
+mannequin.render_tab(tab_dict[4], supabase, username, role, loc_list, t)
+compare.render_tab(tab_dict[5], supabase, username, role, loc_list, t)
+transfer.render_tab(tab_dict[6], supabase, username, role, loc_list, t)
+sales.render_tab(tab_dict[7], supabase, square_client, username, role, loc_list, t)
+admin.render_tab(tab_dict[8], supabase, username, role, loc_list, t)
+password.render_tab(tab_dict[9], supabase, username, role, loc_list, t)

@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from utils.supabase_client import supabase
 from utils.square_client import square_client
 from utils.helpers import login_user, get_allowed_locations

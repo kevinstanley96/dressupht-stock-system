@@ -1,5 +1,5 @@
-import pandas as pd
 import streamlit as st
+import pandas as pd
 from datetime import datetime
 import pytz
 from utils.helpers import clean_and_combine, sync_inventory
@@ -11,7 +11,7 @@ def render_sidebar(username, role, loc_list, supabase):
     last_syncs = supabase.table("sync_log") \
         .select("location, synced_at, type") \
         .order("synced_at", desc=True) \
-        .limit(2) \
+        .limit(5) \
         .execute()
 
     if last_syncs.data:
@@ -31,45 +31,53 @@ def render_sidebar(username, role, loc_list, supabase):
         st.subheader("📂 Upload Square Export Files")
         file_cv = st.file_uploader("Upload Canape-Vert file", type=["xlsx"])
         file_pv = st.file_uploader("Upload Dressupht Pv file", type=["xlsx"])
-    
+
         if file_cv and file_pv:
             combined_df = clean_and_combine(file_cv, file_pv)
             st.info("Preview of combined inventory before overwrite:")
             st.dataframe(combined_df.head(20))
-    
-        # ✅ Corrected overwrite block
+
         if st.button("🚀 Overwrite & Sync", use_container_width=True) and file_cv and file_pv:
-            progress = st.progress(0)
-            progress.progress(20)
-    
-            # Combine and clean
-            combined_df = clean_and_combine(file_cv, file_pv)
-            progress.progress(40)
-    
-            # 🔧 Ensure JSON-safe values
-            combined_df = combined_df.where(pd.notnull(combined_df), None)
-            for col in ["Stock", "Price"]:
-                if col in combined_df.columns:
-                    combined_df[col] = combined_df[col].astype(float).astype(object)
-    
-            records = combined_df.to_dict(orient="records")
-    
-            # Replace Master_Inventory with fresh data
-            supabase.table("Master_Inventory").delete().neq("id", 0).execute()
-            progress.progress(60)
-    
-            supabase.table("Master_Inventory").insert(records).execute()
-            progress.progress(80)
-    
-            # ✅ Log manual sync time
-            now_ht = datetime.now(haiti_tz).isoformat()
-            supabase.table("sync_log").insert([
-                {"location": "Canape-Vert", "synced_at": now_ht, "type": "MISE"},
-                {"location": "Dressupht Pv", "synced_at": now_ht, "type": "MISE"}
-            ]).execute()
-            progress.progress(100)
-    
-            st.success("✅ Master_Inventory refreshed and manual sync logged.")
+            try:
+                progress = st.progress(0)
+                progress.progress(20)
+
+                # Combine and clean
+                combined_df = clean_and_combine(file_cv, file_pv)
+                progress.progress(40)
+
+                # 🔧 Drop unwanted columns
+                if "Unnamed: 0" in combined_df.columns:
+                    combined_df = combined_df.drop(columns=["Unnamed: 0"])
+
+                # Replace NaN with None
+                combined_df = combined_df.where(pd.notnull(combined_df), None)
+
+                # Ensure numeric columns are JSON-safe
+                for col in ["Stock", "Price"]:
+                    if col in combined_df.columns:
+                        combined_df[col] = combined_df[col].astype(float).astype(object)
+
+                records = combined_df.to_dict(orient="records")
+
+                # Replace Master_Inventory with fresh data
+                supabase.table("Master_Inventory").delete().neq("id", 0).execute()
+                progress.progress(60)
+
+                supabase.table("Master_Inventory").insert(records).execute()
+                progress.progress(80)
+
+                # ✅ Log manual sync time
+                now_ht = datetime.now(haiti_tz).isoformat()
+                supabase.table("sync_log").insert([
+                    {"location": "Canape-Vert", "synced_at": now_ht, "type": "MISE"},
+                    {"location": "Dressupht Pv", "synced_at": now_ht, "type": "MISE"}
+                ]).execute()
+                progress.progress(100)
+
+                st.success("✅ Master_Inventory refreshed and manual sync logged.")
+            except Exception as e:
+                st.error(f"❌ Error during overwrite & sync: {e}")
 
     # --- SYNC BUTTONS ---
     st.header("🔄 Inventory Sync")
@@ -77,6 +85,12 @@ def render_sidebar(username, role, loc_list, supabase):
         sync_inventory("Dressupht Pv", supabase)
     if st.button("Sync Inventory - Canape-Vert"):
         sync_inventory("Canape-Vert", supabase)
+
+    sync_log = supabase.table("sync_log").select("*").order("synced_at", desc=True).limit(5).execute()
+    if sync_log.data:
+        st.subheader("🕒 Last Syncs")
+        for row in sync_log.data:
+            st.write(f"{row['location']}: {row['synced_at']}")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):

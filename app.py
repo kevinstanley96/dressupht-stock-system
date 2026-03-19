@@ -23,7 +23,10 @@ if not user_info:
 username, role, location = user_info
 loc_list = get_allowed_locations(supabase, username)
 
-# --- Sidebar (operational only, no login info) ---
+# ✅ Show login info at the top of the main page instead of sidebar
+st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) if loc_list else 'None'}")
+
+# --- Sidebar (operational only) ---
 with st.sidebar:
     render_sidebar(role, supabase)
 

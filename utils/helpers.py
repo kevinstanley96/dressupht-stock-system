@@ -7,10 +7,9 @@ from square import Square
 
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 
-square_client = Square(
-    access_token="YOUR_SQUARE_ACCESS_TOKEN",
-    environment="production"
-)
+square_client = Square()  # no args
+square_client.config.access_token = "YOUR_SQUARE_ACCESS_TOKEN"
+square_client.config.environment = "production"
 
 # --- LOGIN ---
 def login_user(supabase):

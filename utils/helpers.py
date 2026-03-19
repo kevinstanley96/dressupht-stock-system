@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import pandas as pd
-from pytz import timezone
+import pytz
 from square import Square
 
 haiti_tz = pytz.timezone("America/Port-au-Prince")

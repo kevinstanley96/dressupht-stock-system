@@ -1,15 +1,27 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-import pandas as pd
-import pytz
+from supabase import create_client, Client
+from datetime import datetime, date
+import time
+import io
+import re
+import os
 from square import Square
+from square.environment import SquareEnvironment
+import pytz
 
+# --- Timezone ---
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 
-square_client = Square()  # no args
-square_client.config.access_token = "YOUR_SQUARE_ACCESS_TOKEN"
-square_client.config.environment = "production"
+# --- Square connection ---
+# Load your token from environment or Streamlit secrets
+SQUARE_TOKEN = os.getenv("SQUARE_TOKEN") or st.secrets["SQUARE_ACCESS_TOKEN"]
+
+# Initialize Square client (sandbox for testing, production when live)
+square_client = Square(
+    token=SQUARE_TOKEN,
+    environment=SquareEnvironment.PRODUCTION   # or SquareEnvironment.SANDBOX
+)
 
 # --- LOGIN ---
 def login_user(supabase):

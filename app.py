@@ -28,7 +28,7 @@ st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) i
 
 # --- Sidebar (operational only) ---
 with st.sidebar:
-    render_sidebar(role, supabase)
+    render_sidebar(username, role, loc_list, supabase)
 
 # --- Tab Layout ---
 tab_dict = st.tabs([

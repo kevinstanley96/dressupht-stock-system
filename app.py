@@ -3,6 +3,7 @@ from utils.supabase_client import supabase
 from utils.square_client import square_client
 from utils.helpers import login_user, get_allowed_locations
 from utils.translations import get_translations
+from utils.sidebar import render_sidebar
 
 # Import all tab modules
 from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password
@@ -23,6 +24,9 @@ username, role, location = user_info
 loc_list = get_allowed_locations(supabase, username)
 
 st.sidebar.success(f"Logged in as {username} ({role})")
+
+with st.sidebar:
+    render_sidebar(username, role, loc_list, supabase)
 
 # --- Tab Layout ---
 tab_dict = st.tabs([

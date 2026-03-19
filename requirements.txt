@@ -1,1 +1,9 @@
-
+streamlit
+pandas
+openpyxl
+requests
+streamlit-authenticator==0.3.1
+fpdf
+plotly
+supabase
+squareup>=44.0.0

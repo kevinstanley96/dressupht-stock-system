@@ -1,29 +1,29 @@
 import streamlit as st
 import os
-from square.client import Client
+from square import Square
+from square.environment import SquareEnvironment
 
-def init_square_client() -> Client:
+def init_square_client():
     """
-    Initialize and return a Square client.
-    Reads credentials from Streamlit secrets or environment variables.
+    Initialize and return a Square client using the Square SDK v44+.
     """
     try:
-        # Prefer Streamlit secrets
         access_token = st.secrets["SQUARE_ACCESS_TOKEN"]
         environment = st.secrets.get("SQUARE_ENVIRONMENT", "production")
     except Exception:
-        # Fallback to environment variables
         access_token = os.getenv("SQUARE_ACCESS_TOKEN")
         environment = os.getenv("SQUARE_ENVIRONMENT", "production")
 
     if not access_token:
-        st.error("❌ Square credentials not found. Please set SQUARE_ACCESS_TOKEN.")
+        st.error("❌ Square credentials not found.")
         return None
 
-    return Client(
+    env = SquareEnvironment.Production if environment == "production" else SquareEnvironment.Sandbox
+
+    return Square(
         access_token=access_token,
-        environment=environment
+        environment=env
     )
 
-# Create a global client instance
+# Global client instance
 square_client = init_square_client()

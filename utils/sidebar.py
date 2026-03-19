@@ -72,12 +72,6 @@ def render_sidebar(username, role, loc_list, supabase):
     if st.button("Sync Inventory - Dressup Haiti"):
         sync_inventory("Canape-Vert")
 
-    sync_log = supabase.table("sync_log").select("*").order("synced_at", desc=True).limit(5).execute()
-    if sync_log.data:
-        st.subheader("🕒 Last Syncs")
-        for row in sync_log.data:
-            st.write(f"{row['location']}: {row['synced_at']}")
-
     # --- LOGOUT ---
     if st.session_state.get("authenticated", False):
         st.markdown(f"**Logged in as:** {st.session_state.username}")

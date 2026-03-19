@@ -18,7 +18,8 @@ def init_square_client():
         st.error("❌ Square credentials not found.")
         return None
 
-    env = SquareEnvironment.Production if environment == "production" else SquareEnvironment.Sandbox
+    # Use lowercase attributes for SquareEnvironment
+    env = SquareEnvironment.production if environment == "production" else SquareEnvironment.sandbox
 
     return Square(
         access_token=access_token,

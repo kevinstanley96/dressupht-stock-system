@@ -77,3 +77,16 @@ def render_sidebar(username, role, loc_list, supabase):
         st.subheader("🕒 Last Syncs")
         for row in sync_log.data:
             st.write(f"{row['location']}: {row['synced_at']}")
+
+    # --- LOGOUT ---
+    if st.session_state.get("authenticated", False):
+        st.markdown(f"**Logged in as:** {st.session_state.username}")
+        st.markdown(f"**Role:** {st.session_state.role}")
+        st.markdown(f"**Location:** {st.session_state.location}")
+
+        if st.button("Logout"):
+            st.session_state.authenticated = False
+            st.session_state.username = None
+            st.session_state.role = None
+            st.session_state.location = None
+            st.rerun()

@@ -59,19 +59,42 @@ def get_allowed_locations(supabase, username):
         return []
 
 def clean_and_combine(file_cv, file_pv):
-    """
-    Read two uploaded Excel files, clean them, and return a combined DataFrame.
-    Adjust cleaning logic as needed for your schema.
-    """
-    df_cv = pd.read_excel(file_cv)
-    df_pv = pd.read_excel(file_pv)
+    def process_file(file, loc_name):
+        df = pd.read_excel(file, skiprows=1)
+        df.columns = [str(c).strip() for c in df.columns]
 
-    # Example cleaning: strip whitespace, unify column names
-    df_cv.columns = [c.strip() for c in df_cv.columns]
-    df_pv.columns = [c.strip() for c in df_pv.columns]
+        # Column mapping
+        mapping = {
+            'Item Name': 'Full Name',
+            'SKU': 'SKU',
+            'Categories': 'Category',
+            'Price': 'Price',
+            'Token': 'Token',              # Matches Square Excel
+            'Square Item ID': 'square_item_id'  # ✅ new mapping if present
+        }
+        df = df.rename(columns=mapping)
 
-    combined_df = pd.concat([df_cv, df_pv], ignore_index=True)
-    return combined_df
+        # Stock column depends on location
+        stock_col = "Current Quantity Dressup Haiti" if loc_name == "Canape-Vert" else "Current Quantity Dressupht Pv"
+
+        # Ensure required columns exist
+        if 'Token' not in df.columns:
+            df['Token'] = "NO_TOKEN"
+        if 'square_item_id' not in df.columns:
+            df['square_item_id'] = "NO_ID"
+
+        # Clean and normalize fields
+        df['Stock'] = pd.to_numeric(df[stock_col], errors='coerce').fillna(0).astype(int) if stock_col in df.columns else 0
+        df['SKU'] = df['SKU'].astype(str).str.strip().replace(['nan', ''], 'NO_SKU')
+        df['Category'] = df['Category'].fillna("Uncategorized").astype(str)
+        df['Location'] = loc_name
+        df['Price'] = pd.to_numeric(df.get('Price', 0), errors='coerce').fillna(0.0)
+
+        return df[['SKU', 'Full Name', 'Stock', 'Price', 'Category', 'Location', 'Token', 'square_item_id']].copy()
+
+    df1 = process_file(file_cv, "Canape-Vert")
+    df2 = process_file(file_pv, "Pv")
+    return pd.concat([df1, df2], ignore_index=True)
 
 # --- SAFE DATAFRAME DISPLAY ---
 def safe_dataframe(df, cols, empty_msg="No data available."):

@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import pandas as pd
 from pytz import timezone
+from square.client import Client
 
 haiti_tz = timezone("America/Port-au-Prince")
 

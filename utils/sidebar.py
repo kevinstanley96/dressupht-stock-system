@@ -86,18 +86,10 @@ def render_sidebar(username, role, loc_list, supabase):
     st.header("🔄 Inventory Sync")
     
     if st.button("Sync Inventory - Dressupht Pv"):
-        success = sync_inventory("Dressupht Pv", supabase)
-        if success:
-            st.success("✅ Dressupht Pv inventory synced successfully!")
-        else:
-            st.error("❌ Error syncing Dressupht Pv inventory.")
+        sync_inventory("Dressupht Pv")
     
     if st.button("Sync Inventory - Canape-Vert"):
-        success = sync_inventory("Canape-Vert", supabase)
-        if success:
-            st.success("✅ Canape-Vert inventory synced successfully!")
-        else:
-            st.error("❌ Error syncing Canape-Vert inventory.")
+        sync_inventory("Canape-Vert")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):

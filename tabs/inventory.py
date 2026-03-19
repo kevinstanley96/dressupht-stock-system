@@ -19,7 +19,11 @@ def render_tab(container, supabase, username, role, loc_list, t):
         if not master_inventory.empty:
             # Location filter
             if role in ["Admin", "Manager"]:
-                sel_loc = st.selectbox(t["location"], ["All Locations"] + sorted(master_inventory['Location'].unique()))
+                sel_loc = st.selectbox(
+                    t["location"],
+                    ["All Locations"] + sorted(master_inventory['Location'].unique()),
+                    key="inventory_location_select"
+                )
                 inv_df = master_inventory if sel_loc == "All Locations" else master_inventory[master_inventory['Location'] == sel_loc]
             else:
                 inv_df = master_inventory[master_inventory['Location'] == loc_list[0]]
@@ -27,16 +31,24 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 sel_loc = loc_list[0]
 
             # Category selection
-            sel_cat = st.selectbox("Select Category", sorted(inv_df['Category'].unique()))
+            sel_cat = st.selectbox(
+                "Select Category",
+                sorted(inv_df['Category'].unique()),
+                key="inventory_category_select"
+            )
             cat_df = inv_df[inv_df['Category'] == sel_cat].copy()
 
             # Editable physical counts
             cat_df['Total_Physical'] = 0
-            edited_df = st.data_editor(cat_df[['Full Name','SKU','Stock','Total_Physical']],
-                                       num_rows="dynamic", width='stretch')
+            edited_df = st.data_editor(
+                cat_df[['Full Name','SKU','Stock','Total_Physical']],
+                num_rows="dynamic",
+                width='stretch',
+                key="inventory_data_editor"
+            )
 
             # Save audit entries
-            if st.button("✅ Save Audit"):
+            if st.button("✅ Save Audit", key="inventory_save_audit"):
                 for _, row in edited_df.iterrows():
                     audit_entry = {
                         "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -85,19 +97,26 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         })
 
                         st.markdown(f"### 📂 {cat}")
-                        st.dataframe(cat_df[['Date','Name','Total_Physical','System_Stock','Discrepancy','Counter_Name','location']],
-                                     width='stretch', hide_index=True)
+                        st.dataframe(
+                            cat_df[['Date','Name','Total_Physical','System_Stock','Discrepancy','Counter_Name','location']],
+                            width='stretch',
+                            hide_index=True,
+                            key=f"audit_log_{cat}"
+                        )
 
                     summary_df = pd.DataFrame(summary_rows)
                     summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
-                st.download_button("⬇️ Download Full Audit History (Excel with Sheets + Summary)",
-                                   data=output.getvalue(),
-                                   file_name="audit_history_by_category.xlsx",
-                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                st.download_button(
+                    "⬇️ Download Full Audit History (Excel with Sheets + Summary)",
+                    data=output.getvalue(),
+                    file_name="audit_history_by_category.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="inventory_download_button"
+                )
 
                 st.divider(); st.subheader("📊 Summary Preview")
-                st.dataframe(summary_df, width='stretch', hide_index=True)
+                st.dataframe(summary_df, width='stretch', hide_index=True, key="inventory_summary_preview")
             else:
                 st.info("No audit records found yet.")
         except Exception as e:

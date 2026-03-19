@@ -30,27 +30,44 @@ def render_sidebar(username, role, loc_list, supabase):
         st.subheader("📂 Upload Square Export Files")
         file_cv = st.file_uploader("Upload Canape-Vert file", type=["xlsx"])
         file_pv = st.file_uploader("Upload Dressupht Pv file", type=["xlsx"])
-
+    
         if file_cv and file_pv:
             combined_df = clean_and_combine(file_cv, file_pv)
             st.info("Preview of combined inventory before overwrite:")
             st.dataframe(combined_df.head(20))
-
+    
+        # ✅ Corrected overwrite block
         if st.button("🚀 Overwrite & Sync", use_container_width=True) and file_cv and file_pv:
             progress = st.progress(0)
             progress.progress(20)
+    
+            # Combine and clean
             combined_df = clean_and_combine(file_cv, file_pv)
             progress.progress(40)
+    
+            # 🔧 Ensure JSON-safe values
+            combined_df = combined_df.where(pd.notnull(combined_df), None)
+            for col in ["Stock", "Price"]:
+                if col in combined_df.columns:
+                    combined_df[col] = combined_df[col].astype(float).astype(object)
+    
+            records = combined_df.to_dict(orient="records")
+    
+            # Replace Master_Inventory with fresh data
             supabase.table("Master_Inventory").delete().neq("id", 0).execute()
             progress.progress(60)
-            supabase.table("Master_Inventory").insert(combined_df.to_dict(orient="records")).execute()
+    
+            supabase.table("Master_Inventory").insert(records).execute()
             progress.progress(80)
+    
+            # ✅ Log manual sync time
             now_ht = datetime.now(haiti_tz).isoformat()
             supabase.table("sync_log").insert([
                 {"location": "Canape-Vert", "synced_at": now_ht, "type": "MISE"},
                 {"location": "Dressupht Pv", "synced_at": now_ht, "type": "MISE"}
             ]).execute()
             progress.progress(100)
+    
             st.success("✅ Master_Inventory refreshed and manual sync logged.")
 
     # --- SYNC BUTTONS ---

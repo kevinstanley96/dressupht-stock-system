@@ -113,6 +113,13 @@ def clean_and_combine(file_cv, file_pv):
     df2 = process_file(file_pv, "Pv")
     return pd.concat([df1, df2], ignore_index=True)
 
+# Map internal names → Square names
+LOCATION_MAP = {
+    "Canape-Vert": "Dressup Haiti",
+    "Pv": "Dressupht Pv",
+    "Dressupht Pv": "Dressupht Pv"   # ✅ add this line
+}
+
 # --- SAFE DATAFRAME DISPLAY ---
 def safe_dataframe(df, cols, empty_msg="No data available."):
     """Safely display a dataframe with selected columns."""

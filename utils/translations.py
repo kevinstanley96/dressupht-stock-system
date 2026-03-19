@@ -1,8 +1,4 @@
 def get_translations(language="en"):
-    """
-    Return a dictionary of translations for UI labels.
-    Extend this dictionary for additional languages.
-    """
     translations = {
         "en": {
             # --- General ---
@@ -12,6 +8,9 @@ def get_translations(language="en"):
             "success": "✅ Logged {qty} units of {name}",
             "showing": "Showing {count} records",
             "no_logs": "No logs found.",
+
+            # --- Library ---
+            "library_header": "📚 Library",
 
             # --- Arrival ---
             "arrival_header": "📦 Arrival Log",
@@ -50,8 +49,8 @@ def get_translations(language="en"):
             "password_header": "🔑 Change Password",
         },
 
-        # Example French translations
         "fr": {
+            # --- General ---
             "restricted": "Vous n'avez pas la permission d'accéder à cette section.",
             "not_found": "Article introuvable dans l'inventaire principal.",
             "error_log": "Erreur lors de l'enregistrement",
@@ -59,6 +58,10 @@ def get_translations(language="en"):
             "showing": "Affichage de {count} enregistrements",
             "no_logs": "Aucun journal trouvé.",
 
+            # --- Library ---
+            "library_header": "📚 Bibliothèque",
+
+            # --- Arrival ---
             "arrival_header": "📦 Journal des arrivées",
             "log_stock": "Enregistrer une nouvelle arrivée",
             "sku_input": "Entrer le SKU",
@@ -70,13 +73,28 @@ def get_translations(language="en"):
             "confirm": "Confirmer l'arrivée",
             "history": "Historique des arrivées",
 
+            # --- Inventory ---
             "inventory_header": "📋 Audit d'inventaire",
+
+            # --- Depot ---
             "depot_header": "🏬 Mouvements du dépôt",
+
+            # --- Mannequin ---
             "mannequin_header": "🧍 Présentation sur mannequin",
+
+            # --- Compare ---
             "compare_header": "🔍 Comparer les emplacements",
+
+            # --- Transfer ---
             "transfer_header": "🔄 Transferts",
+
+            # --- Sales ---
             "sales_header": "💰 Ventes",
+
+            # --- Admin ---
             "admin_header": "⚙️ Panneau d'administration",
+
+            # --- Password ---
             "password_header": "🔑 Changer le mot de passe",
         }
     }

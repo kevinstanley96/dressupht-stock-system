@@ -11,22 +11,26 @@ from tabs import library, arrival, inventory, depot, mannequin, compare, transfe
 # --- App Setup ---
 st.set_page_config(page_title="DressUpHT Stock System", layout="wide")
 
-# --- Language Selector ---
+# --- Sidebar: Language selector only ---
 language = st.sidebar.selectbox("🌐 Language", ["en", "fr"], index=0)
 t = get_translations(language)
 
 # --- Authentication ---
 user_info = login_user(supabase)
 if not user_info:
+    # Show login form in main page, not sidebar
+    st.title("Login")
+    st.warning("Please log in to access the system.")
     st.stop()
 
+# --- After login succeeds ---
 username, role, location = user_info
 loc_list = get_allowed_locations(supabase, username)
 
-# ✅ Show login info at the top of the main page instead of sidebar
+# ✅ Show login info at the top of the main page (not sidebar)
 st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) if loc_list else 'None'}")
 
-# --- Sidebar (operational only) ---
+# --- Sidebar: operational tools only ---
 with st.sidebar:
     render_sidebar(username, role, loc_list, supabase)
 

@@ -5,11 +5,11 @@ import pandas as pd
 from pytz import timezone
 from square import Square
 
-haiti_tz = timezone("America/Port-au-Prince")
+haiti_tz = pytz.timezone("America/Port-au-Prince")
 
 square_client = Square(
     access_token="YOUR_SQUARE_ACCESS_TOKEN",
-    environment="production"   # or "sandbox" if you’re testing
+    environment="production"
 )
 
 # --- LOGIN ---

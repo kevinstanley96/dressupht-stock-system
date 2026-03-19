@@ -5,6 +5,7 @@ from utils.square_client import square_client
 from utils.helpers import login_user, get_allowed_locations
 from utils.translations import get_translations
 from utils.sidebar import render_sidebar
+import base64
 
 # Import all tab modules
 from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password

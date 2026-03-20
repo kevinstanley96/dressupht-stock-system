@@ -17,20 +17,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Hide Streamlit default UI elements ---
-hide_streamlit_style = """
-    <style>
-    /* Hide GitHub and Fork icons in the header toolbar */
-    header[data-testid="stHeader"] div:nth-child(1) {
-        display: none !important;
-    }
-
-    /* Hide the footer */
-    footer {visibility: hidden;}
-    </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
 # --- Sidebar: Language selector only ---
 language = st.sidebar.selectbox("🌐 Language / Langue", ["en", "fr"], index=0)
 t = get_translations(language)

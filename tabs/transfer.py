@@ -19,7 +19,7 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
         st.subheader("Transfer History")
         if not t_df.empty:
             cols = ["Date", "Wig Name", "Quantity", "from_location", "to_location", "User"]
-            st.dataframe(t_df[cols], width="stretch", hide_index=True, key="transfer_history_df")
+            st.dataframe(t_df[cols], width="stretch", hide_index=True)
             st.caption(f"Showing {len(t_df)} transfers")
         else:
             st.info("No transfers recorded yet.")
@@ -38,7 +38,7 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
             t_search = st.text_input(
                 "🔍 Search PV Inventory",
                 placeholder="Search by SKU or Name...",
-                key="transfer_search_input"
+                key="transfer_search"
             ).lower()
 
             pv_inventory = master_inventory[master_inventory['Location'] == "Pv"].copy()
@@ -49,14 +49,14 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                     options = match[['SKU','Full Name']].apply(
                         lambda x: f"{x['SKU']} - {x['Full Name']}", axis=1
                     ).tolist()
-                    selected_sku = st.selectbox("Select Item", options, key="transfer_item_select").split(" - ")[0]
+                    selected_sku = st.selectbox("Select Item", options).split(" - ")[0]
                     t_item = match[match['SKU'] == selected_sku].iloc[0]
                     st.success(f"Selected: **{t_item['Full Name']}** ({t_item['SKU']})")
 
                     with st.form("transfer_form", clear_on_submit=True):
-                        t_qty = st.number_input("Quantity to Transfer", min_value=1, step=1, key="transfer_qty_input")
-                        t_date = st.date_input("Date", value=date.today(), key="transfer_date_input")
-                        if st.form_submit_button("Confirm Transfer", key="transfer_confirm_btn"):
+                        t_qty = st.number_input("Quantity to Transfer", min_value=1, step=1)
+                        t_date = st.date_input("Date", value=date.today())
+                        if st.form_submit_button("Confirm Transfer"):
                             transfer_entry = {
                                 "Date": str(t_date),
                                 "SKU": str(t_item['SKU']),

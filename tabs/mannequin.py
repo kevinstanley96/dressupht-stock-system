@@ -21,7 +21,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
             view_loc = st.selectbox(
                 "Select Display Location",
                 ["All","Pv","Canape-Vert"],
-                key="man_hist_loc"
+                key="mannequin_hist_loc_select"
             )
         else:
             view_loc = loc_list[0] if loc_list else None
@@ -32,7 +32,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
         compact_view = st.checkbox(
             "📱 Compact view (mobile-friendly)",
             value=False,
-            key="man_compact_view"
+            key="mannequin_compact_view_checkbox"
         )
 
         # Filter history by location
@@ -41,10 +41,10 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 m_df = m_df[m_df['location'] == view_loc]
 
             if compact_view:
-                safe_dataframe(m_df, ['Full Name','Quantity'], "No wigs currently on display.")
+                safe_dataframe(m_df, ['Full Name','Quantity'], "No wigs currently on display.", key="mannequin_compact_df")
             else:
                 safe_dataframe(m_df, ['SKU','Full Name','Quantity','Last_Updated','location'],
-                               "No wigs currently on display.")
+                               "No wigs currently on display.", key="mannequin_full_df")
 
             st.caption(f"Total Items on Display: {int(m_df['Quantity'].sum())}")
         else:
@@ -58,14 +58,14 @@ def render_tab(container, supabase, username, role, loc_list, t):
             m_loc = st.selectbox(
                 "Select Location for Entry",
                 ["Pv","Canape-Vert"],
-                key="man_entry_loc"
+                key="mannequin_entry_loc_select"
             )
 
             # ✅ Library-style search
             m_search = st.text_input(
                 "🔍 Search Item to Display",
                 placeholder="Search by SKU, Name, Token, or Category...",
-                key="man_search_input"
+                key="mannequin_search_input"
             ).strip().lower()
 
             if m_search:
@@ -81,15 +81,15 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     selected_sku = st.selectbox(
                         "Select Item",
                         options,
-                        key="man_item_select"
+                        key="mannequin_item_select"
                     ).split(" - ")[0]
                     m_item = match[match['SKU'] == selected_sku].iloc[0]
 
                     st.success(f"Selected: **{m_item['Full Name']}** ({m_item['SKU']})")
 
-                    with st.form("man_form", clear_on_submit=True):
-                        m_qty = st.number_input("Quantity", min_value=1, max_value=2, step=1, key="man_qty_input")
-                        if st.form_submit_button("🚀 Set on Mannequin", key="man_submit_btn"):
+                    with st.form("mannequin_form", clear_on_submit=True):
+                        m_qty = st.number_input("Quantity", min_value=1, max_value=2, step=1, key="mannequin_qty_input")
+                        if st.form_submit_button("🚀 Set on Mannequin", key="mannequin_submit_btn"):
                             man_entry = {
                                 "SKU": str(m_item['SKU']),
                                 "Full Name": str(m_item['Full Name']),

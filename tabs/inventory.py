@@ -48,7 +48,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
             )
 
             # Save audit entries
-            if st.button("✅ Save Audit", key="inventory_save_audit"):
+            if st.button("✅ Save Audit", key="inventory_save_audit_btn"):
                 for _, row in edited_df.iterrows():
                     audit_entry = {
                         "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -101,7 +101,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                             cat_df[['Date','Name','Total_Physical','System_Stock','Discrepancy','Counter_Name','location']],
                             width='stretch',
                             hide_index=True,
-                            key=f"audit_log_{cat}"
+                            key=f"inventory_audit_log_{cat}"
                         )
 
                     summary_df = pd.DataFrame(summary_rows)
@@ -112,11 +112,11 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     data=output.getvalue(),
                     file_name="audit_history_by_category.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="inventory_download_button"
+                    key="inventory_download_btn"
                 )
 
                 st.divider(); st.subheader("📊 Summary Preview")
-                st.dataframe(summary_df, width='stretch', hide_index=True, key="inventory_summary_preview")
+                st.dataframe(summary_df, width='stretch', hide_index=True, key="inventory_summary_preview_df")
             else:
                 st.info("No audit records found yet.")
         except Exception as e:

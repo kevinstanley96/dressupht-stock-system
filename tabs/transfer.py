@@ -28,8 +28,11 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
         st.divider()
         st.subheader("Log New Transfer (PV → Canape-Vert)")
 
-        # Ensure master_inventory is loaded
-        if master_inventory is None or master_inventory.empty:
+        # ✅ Reload Master_Inventory fresh from Supabase
+        inv_query = supabase.table("Master_Inventory").select("*").execute()
+        master_inventory = pd.DataFrame(inv_query.data) if inv_query.data else pd.DataFrame()
+
+        if master_inventory.empty:
             st.error("PV inventory is not loaded yet. Please refresh or sync inventory first.")
         else:
             t_search = st.text_input(

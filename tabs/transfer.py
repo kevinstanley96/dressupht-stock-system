@@ -5,7 +5,7 @@ from datetime import date
 from utils.helpers import search_inventory
 
 def render_tab(container, supabase, username, role, loc_list, t, master_inventory=None):
-    with tab_dict["Transfer"]:
+    with container:
         st.header("🔄 Transfer to Canape-Vert")
 
         # --- Transfer history ---

@@ -44,9 +44,9 @@ def render_sidebar(username, role, loc_list, supabase):
         if file_cv and file_pv:
             combined_df = clean_and_combine(file_cv, file_pv)
             st.info("Preview of combined inventory before overwrite:")
-            st.dataframe(combined_df.head(20))
+            st.dataframe(combined_df.head(20), key="preview_combined_df")
 
-        if st.button("🚀 Overwrite & Sync", use_container_width=True) and file_cv and file_pv:
+        if st.button("🚀 Overwrite & Sync", use_container_width=True, key="overwrite_sync_btn") and file_cv and file_pv:
             try:
                 progress = st.progress(0)
                 progress.progress(20)
@@ -94,16 +94,16 @@ def render_sidebar(username, role, loc_list, supabase):
     # --- SYNC BUTTONS ---
     st.header("🔄 Inventory Sync")
     
-    if st.button("Sync Inventory - Dressupht Pv"):
+    if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
         sync_inventory("Dressupht Pv")
     
-    if st.button("Sync Inventory - Canape-Vert"):
+    if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
         sync_inventory("Canape-Vert")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):
         st.divider()
-        if st.button("🚪 Logout", use_container_width=True):
+        if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
             st.session_state.authenticated = False
             st.session_state.username = None
             st.session_state.role = None

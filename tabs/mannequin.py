@@ -18,14 +18,22 @@ def render_tab(container, supabase, username, role, loc_list, t):
         # 2. LOCATION SELECTOR FOR HISTORY VIEW
         st.subheader("Current Wigs on Display")
         if role in ["Admin","Manager"]:
-            view_loc = st.selectbox("Select Display Location", ["All","Pv","Canape-Vert"], key="man_hist_loc")
+            view_loc = st.selectbox(
+                "Select Display Location",
+                ["All","Pv","Canape-Vert"],
+                key="man_hist_loc"
+            )
         else:
             view_loc = loc_list[0] if loc_list else None
             if view_loc:
                 st.write(f"📍 Viewing Display for: {view_loc}")
 
         # Compact view toggle
-        compact_view = st.checkbox("📱 Compact view (mobile-friendly)", value=False, key="mannequin_compact")
+        compact_view = st.checkbox(
+            "📱 Compact view (mobile-friendly)",
+            value=False,
+            key="man_compact_view"
+        )
 
         # Filter history by location
         if not m_df.empty and view_loc:
@@ -47,14 +55,18 @@ def render_tab(container, supabase, username, role, loc_list, t):
             st.divider()
             st.subheader("Add/Update Display")
 
-            m_loc = st.selectbox("Select Location for Entry", ["Pv","Canape-Vert"], key="man_entry_loc")
-
-            # Location selector
             m_loc = st.selectbox(
                 "Select Location for Entry",
                 ["Pv","Canape-Vert"],
                 key="man_entry_loc"
             )
+
+            # ✅ Library-style search
+            m_search = st.text_input(
+                "🔍 Search Item to Display",
+                placeholder="Search by SKU, Name, Token, or Category...",
+                key="man_search_input"
+            ).strip().lower()
 
             if m_search:
                 # Always reload Master_Inventory fresh
@@ -76,8 +88,8 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     st.success(f"Selected: **{m_item['Full Name']}** ({m_item['SKU']})")
 
                     with st.form("man_form", clear_on_submit=True):
-                        m_qty = st.number_input("Quantity", min_value=1, max_value=2, step=1)
-                        if st.form_submit_button("🚀 Set on Mannequin"):
+                        m_qty = st.number_input("Quantity", min_value=1, max_value=2, step=1, key="man_qty_input")
+                        if st.form_submit_button("🚀 Set on Mannequin", key="man_submit_btn"):
                             man_entry = {
                                 "SKU": str(m_item['SKU']),
                                 "Full Name": str(m_item['Full Name']),

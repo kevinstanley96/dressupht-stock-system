@@ -29,8 +29,17 @@ def render_sidebar(username, role, loc_list, supabase):
     # --- MISE Upload + Overwrite ---
     if role in ["Admin", "Manager"]:
         st.subheader("📂 Upload Square Export Files")
-        file_cv = st.file_uploader("Upload Canape-Vert file", type=["xlsx"])
-        file_pv = st.file_uploader("Upload Dressupht Pv file", type=["xlsx"])
+        file_cv = st.file_uploader(
+            "Upload Canape-Vert file",
+            type=["xlsx"],
+            key="file_cv_uploader"
+        )
+        
+        file_pv = st.file_uploader(
+            "Upload PV file",
+            type=["xlsx"],
+            key="file_pv_uploader"
+        )
 
         if file_cv and file_pv:
             combined_df = clean_and_combine(file_cv, file_pv)

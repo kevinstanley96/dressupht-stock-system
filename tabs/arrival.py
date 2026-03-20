@@ -19,19 +19,25 @@ def render_tab(container, supabase, username, role, loc_list, t):
             # --- Arrival Entry ---
             with col1:
                 st.subheader(t["log_stock"])
-                in_sku = st.text_input(t["sku_input"], key="arr_sku_input").strip()
+                search_query = st.text_input("🔍 Search Inventory", placeholder="Search by SKU, Name, Token, or Category...", key="arrival_search").strip().lower()
 
-                if in_sku and in_sku != st.session_state.arrival_verify["sku"]:
-                    query = supabase.table("Master_Inventory").select("*").eq("SKU", in_sku).execute()
-                    match = pd.DataFrame(query.data)
+                if search_query:
+                    inv_query = supabase.table("Master_Inventory").select("*").execute()
+                    inv_df = pd.DataFrame(inv_query.data) if inv_query.data else pd.DataFrame()
+                
+                    match = search_inventory(inv_df, search_query)
                     if not match.empty:
+                        options = match[['SKU','Full Name']].apply(lambda x: f"{x['SKU']} - {x['Full Name']}", axis=1).tolist()
+                        selected_sku = st.selectbox("Select Item", options).split(" - ")[0]
+                        t_item = match[match['SKU'] == selected_sku].iloc[0]
+                
                         st.session_state.arrival_verify = {
-                            "name": match['Full Name'].iloc[0],
-                            "cat": match['Category'].iloc[0],
-                            "sku": in_sku
+                            "name": t_item['Full Name'],
+                            "cat": t_item['Category'],
+                            "sku": t_item['SKU']
                         }
                     else:
-                        st.session_state.arrival_verify = {"name": None, "cat": None, "sku": in_sku}
+                        st.session_state.arrival_verify = {"name": None, "cat": None, "sku": ""}
                         st.error(t["not_found"])
 
                 if st.session_state.arrival_verify["name"]:

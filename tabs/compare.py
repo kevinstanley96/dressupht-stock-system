@@ -6,6 +6,7 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
     with container:
         st.header(t["compare_header"])
 
+        # ✅ Ensure master_inventory is loaded
         if master_inventory is not None and not master_inventory.empty:
             # PART A: SIDE-BY-SIDE COMPARISON
             st.subheader("Location Comparison (CV vs PV)")
@@ -21,14 +22,24 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                 columns={'Full Name_CV':'Wig Name','Stock_CV':'Qty (Canape-Vert)','Stock_PV':'Qty (PV)'}
             )
 
-            comp_search = st.text_input("🔍 Search Comparison", placeholder="Filter by Name or SKU...").lower()
+            # ✅ Library-style search with unique key
+            comp_search = st.text_input(
+                "🔍 Search Comparison",
+                placeholder="Filter by Name, SKU, Token, or Category...",
+                key="compare_search_input"
+            ).strip().lower()
             if comp_search:
-                display_comp = search_inventory(display_comp.rename(columns={'Wig Name':'Full Name'}), comp_search)
+                # Rename column to match search_inventory expectations
+                display_comp = search_inventory(
+                    display_comp.rename(columns={'Wig Name':'Full Name'}),
+                    comp_search
+                )
 
             safe_dataframe(display_comp, display_comp.columns.tolist(), "No comparison data.")
 
             # PART B: HIGH STOCK ALERTS
-            st.divider(); st.subheader("🔥 High Stock Alert (Over 50 Units)")
+            st.divider()
+            st.subheader("🔥 High Stock Alert (Over 50 Units)")
             col_high1, col_high2 = st.columns(2)
 
             with col_high1:
@@ -38,4 +49,4 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                 show_high_stock_alert(df_pv, "PV", threshold=50)
 
         else:
-            st.info("Please upload inventory files in the sidebar to perform comparison.")
+            st.info("Please upload or sync Master_Inventory to perform comparison.")

@@ -38,7 +38,6 @@ def login_user(supabase):
         st.session_state.location = None
 
     if not st.session_state.authenticated:
-        st.title("🔑 Login")
         username_input = st.text_input("Username")
         password_input = st.text_input("Password", type="password")
 

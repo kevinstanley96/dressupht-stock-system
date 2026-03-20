@@ -275,19 +275,22 @@ def sync_inventory(location_name):
                                     supabase.table("Master_Inventory").update({"Stock": new_qty}).eq("Full Name", product_name).execute()
 
                         # ✅ Log into sales table with upsert
-                        supabase.table("sales").upsert({
-                            "order_id": order.id,
-                            "location": location_name,
-                            "product_token": product_token if product_token else None,
-                            "product_name": product_name,
-                            "quantity": qty_sold,
-                            "unit_price": float(item.base_price_money.amount) / 100 if item.base_price_money else None,
-                            "total_amount": float(item.total_money.amount) / 100 if item.total_money else None,
-                            "category": category,
-                            "state": order.state,
-                            "created_at": created_dt.isoformat(),
-                            "updated_at": datetime.now(haiti_tz).isoformat()
-                        }, on_conflict=["order_id","product_token"]).execute()
+                        supabase.table("sales").upsert(
+                            {
+                                "order_id": order.id,
+                                "location": location_name,
+                                "product_token": product_token if product_token else None,
+                                "product_name": product_name,
+                                "quantity": qty_sold,
+                                "unit_price": float(item.base_price_money.amount) / 100 if item.base_price_money else None,
+                                "total_amount": float(item.total_money.amount) / 100 if item.total_money else None,
+                                "category": category,
+                                "state": order.state,
+                                "created_at": created_dt.isoformat(),
+                                "updated_at": datetime.now(haiti_tz).isoformat()
+                            },
+                            on_conflict="order_id,product_token"  # ✅ key fix
+                        ).execute()
 
                 updates.append(order.id)
 

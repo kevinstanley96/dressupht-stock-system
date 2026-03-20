@@ -179,28 +179,49 @@ def render_tab(container, supabase, square_client, username, role, loc_list, t):
                     df_hist = pd.DataFrame(data_hist)
         
                     # Date filter
-                    sel_date = st.date_input("Select Date", value=date.today(), min_value=cutoff_date, key="sales_hist_date")
-                    df_hist = df_hist[df_hist["Date"] == sel_date]
-        
+                    sel_date = st.date_input(
+                        "Select Date",
+                        value=date.today(),
+                        min_value=cutoff_date,
+                        key="sales_hist_date"
+                    )
+                    
                     # ✅ Search filter by SKU or Name
                     search_query = st.text_input(
                         "🔍 Search Sales History",
                         placeholder="Enter SKU or Product Name...",
                         key="sales_hist_search"
                     ).strip().lower()
+                    
+                    search_all = st.checkbox("Search across all dates", value=False, key="sales_hist_all")
+                    
+                    df_hist_filtered = df_hist.copy()
+                    
                     if search_query:
-                        df_hist = df_hist[
-                            df_hist["SKU"].str.lower().str.contains(search_query) |
-                            df_hist["Product"].str.lower().str.contains(search_query)
-                        ]
-        
-                    st.success(f"✅ Showing {len(df_hist)} product-level sales for {sel_date}")
-        
-                    summary_hist = df_hist.groupby("Location").size().reset_index(name="Order Count")
-                    st.subheader(f"📍 Orders per Location ({sel_date})")
+                        if search_all:
+                            # Search across all dates ≥ cutoff
+                            df_hist_filtered = df_hist_filtered[
+                                df_hist_filtered["SKU"].str.lower().str.contains(search_query) |
+                                df_hist_filtered["Product"].str.lower().str.contains(search_query)
+                            ]
+                        else:
+                            # Restrict to selected date first, then search
+                            df_hist_filtered = df_hist_filtered[df_hist_filtered["Date"] == sel_date]
+                            df_hist_filtered = df_hist_filtered[
+                                df_hist_filtered["SKU"].str.lower().str.contains(search_query) |
+                                df_hist_filtered["Product"].str.lower().str.contains(search_query)
+                            ]
+                    else:
+                        # No search, just filter by date
+                        df_hist_filtered = df_hist_filtered[df_hist_filtered["Date"] == sel_date]
+                    
+                    st.success(f"✅ Showing {len(df_hist_filtered)} product-level sales for {sel_date if not search_all else 'all dates'}")
+                    
+                    summary_hist = df_hist_filtered.groupby("Location").size().reset_index(name="Order Count")
+                    st.subheader(f"📍 Orders per Location ({sel_date if not search_all else 'All Dates'})")
                     st.table(summary_hist)
-        
-                    st.dataframe(df_hist, width="stretch", hide_index=True)
+                    
+                    st.dataframe(df_hist_filtered, width="stretch", hide_index=True)
                 else:
                     st.info("No sales found after 03/20/2026.")
         

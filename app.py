@@ -47,18 +47,6 @@ tab_list = role_tabs.get(role, ["Library", "Password"])
 tabs = st.tabs(tab_list)
 tab_dict = {name: tabs[i] for i, name in enumerate(tab_list)}
 
-# --- After login succeeds ---
-username, role, location = user_info
-loc_list = get_allowed_locations(supabase, username)
-
-# ✅ Show login info at the top of the main page
-st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) if loc_list else 'None'}")
-
-# --- Sidebar: operational tools + role indicator ---
-with st.sidebar:
-    st.markdown("### 👤 User Info")
-    st.write(f"**Role:** {role}")
-
 # --- Render Tabs (only those allowed) ---
 if "Library" in tab_dict:
     library.render_tab(tab_dict["Library"], supabase, username, role, loc_list, t)
@@ -84,3 +72,15 @@ if "Password" in tab_dict:
     st.write(f"**Locations:** {', '.join(loc_list) if loc_list else 'None'}")
     st.divider()
     render_sidebar(username, role, loc_list, supabase)
+
+# --- After login succeeds ---
+username, role, location = user_info
+loc_list = get_allowed_locations(supabase, username)
+
+# ✅ Show login info at the top of the main page
+st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) if loc_list else 'None'}")
+
+# --- Sidebar: operational tools + role indicator ---
+with st.sidebar:
+    st.markdown("### 👤 User Info")
+    st.write(f"**Role:** {role}")

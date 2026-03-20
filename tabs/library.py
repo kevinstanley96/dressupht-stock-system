@@ -122,9 +122,9 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 cols = ['Location','Category','Full Name','SKU','Stock','Price']
 
             def safe_dataframe(df, cols, empty_msg="No data available.", key=None):
-    """Safely display a dataframe with selected columns."""
-    if df is not None and not df.empty:
-        st.dataframe(df[cols], width="stretch", hide_index=True, key=key)
-    else: 
-        st.info("No data in Master_Inventory.")
+            """Safely display a dataframe with selected columns."""
+            if df is not None and not df.empty:
+                st.dataframe(df[cols], width="stretch", hide_index=True, key=key)
+            else: 
+                st.info("No data in Master_Inventory.")
 

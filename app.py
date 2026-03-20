@@ -40,7 +40,6 @@ st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) i
 with st.sidebar:
     st.markdown("### 👤 User Info")
     st.write(f"**Role:** {role}")
-    st.write(f"**Allowed Tabs:** {', '.join(tab_list)}")
     st.write(f"**Locations:** {', '.join(loc_list) if loc_list else 'None'}")
     st.divider()
     render_sidebar(username, role, loc_list, supabase)

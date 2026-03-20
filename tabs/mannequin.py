@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 from utils.helpers import search_inventory, safe_dataframe
 
-def render_tab(container, supabase, username, role, loc_list, t, master_inventory=None):
+def render_tab(container, supabase, username, role, loc_list, t):
     with container:
         st.header(t["mannequin_header"])
 
@@ -33,10 +33,8 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                 m_df = m_df[m_df['location'] == view_loc]
 
             if compact_view:
-                # Compact view: only Full Name + Quantity
                 safe_dataframe(m_df, ['Full Name','Quantity'], "No wigs currently on display.")
             else:
-                # Full view: all details
                 safe_dataframe(m_df, ['SKU','Full Name','Quantity','Last_Updated','location'],
                                "No wigs currently on display.")
 
@@ -51,11 +49,25 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
 
             m_loc = st.selectbox("Select Location for Entry", ["Pv","Canape-Vert"], key="man_entry_loc")
 
-            m_search = st.text_input("🔍 Search Item to Display", placeholder="Type Name or SKU...").lower()
-            if m_search and master_inventory is not None:
-                match = search_inventory(master_inventory, m_search)
+            # ✅ Library-style search
+            m_search = st.text_input(
+                "🔍 Search Item to Display",
+                placeholder="Search by SKU, Name, Token, or Category..."
+            ).strip().lower()
+
+            if m_search:
+                # Always reload Master_Inventory fresh
+                inv_query = supabase.table("Master_Inventory").select("*").execute()
+                inv_df = pd.DataFrame(inv_query.data) if inv_query.data else pd.DataFrame()
+
+                match = search_inventory(inv_df, m_search)
                 if not match.empty:
-                    m_item = match.iloc[0]
+                    options = match[['SKU','Full Name']].apply(
+                        lambda x: f"{x['SKU']} - {x['Full Name']}", axis=1
+                    ).tolist()
+                    selected_sku = st.selectbox("Select Item", options).split(" - ")[0]
+                    m_item = match[match['SKU'] == selected_sku].iloc[0]
+
                     st.success(f"Selected: **{m_item['Full Name']}** ({m_item['SKU']})")
 
                     with st.form("man_form", clear_on_submit=True):
@@ -68,7 +80,9 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                                 "location": str(m_loc),
                                 "Last_Updated": datetime.now().strftime("%Y-%m-%d %H:%M")
                             }
+                            # Remove old entry for same SKU/location
                             supabase.table("Mannequin").delete().eq("SKU", m_item['SKU']).eq("location", m_loc).execute()
+                            # Insert new entry
                             supabase.table("Mannequin").insert(man_entry).execute()
                             st.success(f"Updated display for {m_item['Full Name']} at {m_loc}!")
                             time.sleep(1); st.rerun()

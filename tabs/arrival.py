@@ -24,7 +24,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 search_query = st.text_input(
                     "🔍 Search Inventory",
                     placeholder="Search by SKU, Name, Token, or Category...",
-                    key="arrival_search_input"
+                    key="arrival_search"
                 ).strip().lower()
 
                 if search_query:
@@ -36,7 +36,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         options = match[['SKU','Full Name']].apply(
                             lambda x: f"{x['SKU']} - {x['Full Name']}", axis=1
                         ).tolist()
-                        selected_sku = st.selectbox("Select Item", options, key="arrival_item_select").split(" - ")[0]
+                        selected_sku = st.selectbox("Select Item", options).split(" - ")[0]
                         t_item = match[match['SKU'] == selected_sku].iloc[0]
 
                         st.session_state.arrival_verify = {
@@ -49,11 +49,11 @@ def render_tab(container, supabase, username, role, loc_list, t):
                                 f"**{t['category']}:** {t_item['Category']}")
 
                         with st.form("arrival_form", clear_on_submit=True):
-                            arr_date = st.date_input(t["arrival_date"], value=st.session_state.arrival_date, key="arrival_date_input")
-                            arr_qty = st.number_input(t["quantity"], min_value=1, step=1, key="arrival_qty_input")
-                            arr_loc = st.selectbox(t["location"], ["Pv","Canape-Vert"], key="arrival_loc_select") if role in ["Admin","Manager"] else loc_list[0]
+                            arr_date = st.date_input(t["arrival_date"], value=st.session_state.arrival_date)
+                            arr_qty = st.number_input(t["quantity"], min_value=1, step=1)
+                            arr_loc = st.selectbox(t["location"], ["Pv","Canape-Vert"]) if role in ["Admin","Manager"] else loc_list[0]
 
-                            if st.form_submit_button(t["confirm"], key="arrival_confirm_btn"):
+                            if st.form_submit_button(t["confirm"]):
                                 try:
                                     arrival_data = {
                                         "date": datetime.combine(arr_date, datetime.now().time()).isoformat(),
@@ -84,23 +84,23 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         log_df['date'] = pd.to_datetime(log_df['date']).dt.date
 
                         st.dataframe(log_df[['date','wig_name','sku','category','quantity','location','user']],
-                                     width='stretch', hide_index=True, key="arrival_log_df")
+                                     width='stretch', hide_index=True)
                         st.caption(t["showing"].format(count=len(log_df)))
 
                         # Daily summary
                         st.divider(); st.subheader("📊 Daily Summary")
                         st.dataframe(log_df.groupby('date')['quantity'].sum().reset_index(),
-                                     width='stretch', hide_index=True, key="arrival_daily_summary_df")
+                                     width='stretch', hide_index=True)
                         st.dataframe(log_df.groupby(['date','category'])['quantity'].sum().reset_index(),
-                                     width='stretch', hide_index=True, key="arrival_daily_cat_summary_df")
+                                     width='stretch', hide_index=True)
 
                         # Monthly summary
                         st.divider(); st.subheader("📅 Monthly Summary")
                         log_df['month'] = pd.to_datetime(log_df['date']).dt.to_period('M').astype(str)
                         st.dataframe(log_df.groupby('month')['quantity'].sum().reset_index(),
-                                     width='stretch', hide_index=True, key="arrival_monthly_summary_df")
+                                     width='stretch', hide_index=True)
                         st.dataframe(log_df.groupby(['month','category'])['quantity'].sum().reset_index(),
-                                     width='stretch', hide_index=True, key="arrival_monthly_cat_summary_df")
+                                     width='stretch', hide_index=True)
                     else:
                         st.write(t["no_logs"])
                 except Exception as e:

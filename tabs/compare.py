@@ -2,12 +2,15 @@ import streamlit as st
 import pandas as pd
 from utils.helpers import search_inventory, safe_dataframe, show_high_stock_alert
 
-def render_tab(container, supabase, username, role, loc_list, t, master_inventory=None):
+def render_tab(container, supabase, username, role, loc_list, t):
     with container:
         st.header(t["compare_header"])
 
-        # ✅ Ensure master_inventory is loaded
-        if master_inventory is not None and not master_inventory.empty:
+        # ✅ Always reload Master_Inventory fresh
+        inv_query = supabase.table("Master_Inventory").select("*").execute()
+        master_inventory = pd.DataFrame(inv_query.data) if inv_query.data else pd.DataFrame()
+
+        if not master_inventory.empty:
             # PART A: SIDE-BY-SIDE COMPARISON
             st.subheader("Location Comparison (CV vs PV)")
             df_cv = master_inventory[master_inventory['Location']=="Canape-Vert"][['SKU','Full Name','Stock','Category']]
@@ -29,7 +32,6 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                 key="compare_search_input"
             ).strip().lower()
             if comp_search:
-                # Rename column to match search_inventory expectations
                 display_comp = search_inventory(
                     display_comp.rename(columns={'Wig Name':'Full Name'}),
                     comp_search
@@ -49,4 +51,4 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                 show_high_stock_alert(df_pv, "PV", threshold=50)
 
         else:
-            st.info("Please upload or sync Master_Inventory to perform comparison.")
+            st.info("Master_Inventory is empty. Please run MISE or refresh inventory.")

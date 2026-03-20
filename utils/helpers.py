@@ -166,15 +166,17 @@ def normalize_location(loc):
     return loc.title()
 
 # --- HIGH STOCK ALERT ---
-def show_high_stock_alert(df, location, threshold=50):
+def show_high_stock_alert(df, location, threshold=50, key=None):
     """Display items with stock above threshold."""
     if df is not None and not df.empty:
         high_stock = df[df['Stock'] > threshold]
         if not high_stock.empty:
             st.warning(f"⚠️ {len(high_stock)} items in {location} exceed {threshold} units")
-            st.dataframe(high_stock[['SKU','Full Name','Stock']], width="stretch", hide_index=True)
+            st.dataframe(high_stock[['SKU','Full Name','Stock']], width="stretch", hide_index=True, key=key)
         else:
             st.success(f"No items in {location} exceed {threshold} units")
+    else:
+        st.info(f"No data available for {location}.")
 
 def sync_inventory(location_name):
     try:

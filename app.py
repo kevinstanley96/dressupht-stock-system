@@ -27,9 +27,6 @@ hide_streamlit_style = """
 
     /* Hide the footer */
     footer {visibility: hidden;}
-
-    /* Hide the hamburger menu */
-    #MainMenu {visibility: hidden;}
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)

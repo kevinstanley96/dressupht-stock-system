@@ -49,11 +49,12 @@ def render_tab(container, supabase, username, role, loc_list, t):
 
             m_loc = st.selectbox("Select Location for Entry", ["Pv","Canape-Vert"], key="man_entry_loc")
 
-            # ✅ Library-style search
-            m_search = st.text_input(
-                "🔍 Search Item to Display",
-                placeholder="Search by SKU, Name, Token, or Category..."
-            ).strip().lower()
+            # Location selector
+            m_loc = st.selectbox(
+                "Select Location for Entry",
+                ["Pv","Canape-Vert"],
+                key="man_entry_loc"
+            )
 
             if m_search:
                 # Always reload Master_Inventory fresh
@@ -65,7 +66,11 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     options = match[['SKU','Full Name']].apply(
                         lambda x: f"{x['SKU']} - {x['Full Name']}", axis=1
                     ).tolist()
-                    selected_sku = st.selectbox("Select Item", options).split(" - ")[0]
+                    selected_sku = st.selectbox(
+                        "Select Item",
+                        options,
+                        key="man_item_select"
+                    ).split(" - ")[0]
                     m_item = match[match['SKU'] == selected_sku].iloc[0]
 
                     st.success(f"Selected: **{m_item['Full Name']}** ({m_item['SKU']})")

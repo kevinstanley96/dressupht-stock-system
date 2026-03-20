@@ -37,7 +37,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     comp_search
                 )
 
-            safe_dataframe(display_comp, display_comp.columns.tolist(), "No comparison data.")
+            safe_dataframe(display_comp, display_comp.columns.tolist(), "No comparison data.", key="compare_df")
 
             # PART B: HIGH STOCK ALERTS
             st.divider()
@@ -45,10 +45,10 @@ def render_tab(container, supabase, username, role, loc_list, t):
             col_high1, col_high2 = st.columns(2)
 
             with col_high1:
-                show_high_stock_alert(df_cv, "Canape-Vert", threshold=50)
+                show_high_stock_alert(df_cv, "Canape-Vert", threshold=50, key="compare_highstock_cv")
 
             with col_high2:
-                show_high_stock_alert(df_pv, "PV", threshold=50)
+                show_high_stock_alert(df_pv, "PV", threshold=50, key="compare_highstock_pv")
 
         else:
             st.info("Master_Inventory is empty. Please run MISE or refresh inventory.")

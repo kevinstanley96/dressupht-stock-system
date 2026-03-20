@@ -36,14 +36,12 @@ loc_list = get_allowed_locations(supabase, username)
 # ✅ Show login info at the top of the main page
 st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) if loc_list else 'None'}")
 
-# --- Sidebar: operational tools + role indicator ---
-with st.sidebar:
-    st.markdown("### 👤 User Info")
-    st.write(f"**Role:** {role}")
-    st.write(f"**Allowed Tabs:** {', '.join(tab_list)}")
-    st.write(f"**Locations:** {', '.join(loc_list) if loc_list else 'None'}")
-    st.divider()
-    render_sidebar(username, role, loc_list, supabase)
+# --- TABS SETUP BASED ON ROLE ---
+role_tabs = {
+    "Staff":   ["Library", "Mannequin", "Password"],
+    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Password"],
+    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Password"]
+}
 
 tab_list = role_tabs.get(role, ["Library", "Password"])
 tabs = st.tabs(tab_list)

@@ -82,11 +82,11 @@ def render_tab(container, supabase, square_client, username, role, loc_list, t):
                     df = pd.DataFrame(data)
 
                     # Filters
-                    sel_loc = st.selectbox("Filter by Location", ["All"] + sorted(df["Location"].unique()), key="sales_today_loc")
+                    sel_loc = st.selectbox("Filter by Location", ["All"] + sorted(df["Location"].unique()), key="sales_today_loc_select")
                     if sel_loc != "All":
                         df = df[df["Location"] == sel_loc]
 
-                    sel_cat = st.selectbox("Filter by Category", ["All"] + sorted(df["Category"].unique()), key="sales_today_cat")
+                    sel_cat = st.selectbox("Filter by Category", ["All"] + sorted(df["Category"].unique()), key="sales_today_cat_select")
                     if sel_cat != "All":
                         df = df[df["Category"] == sel_cat]
 
@@ -95,10 +95,10 @@ def render_tab(container, supabase, square_client, username, role, loc_list, t):
                     # Summary counts
                     summary = df.groupby("Location").size().reset_index(name="Order Count")
                     st.subheader("📍 Orders per Location (Today)")
-                    st.table(summary)
+                    st.table(summary, key="sales_today_summary_table")
 
                     # Detailed sales
-                    st.dataframe(df, width="stretch", hide_index=True)
+                    st.dataframe(df, width="stretch", hide_index=True, key="sales_today_df")
 
                     # Download
                     csv = df.to_csv(index=False).encode("utf-8")
@@ -107,7 +107,8 @@ def render_tab(container, supabase, square_client, username, role, loc_list, t):
                         data=csv,
                         file_name=f"sales_{date.today().strftime('%Y%m%d')}.csv",
                         mime="text/csv",
-                        use_container_width=True
+                        use_container_width=True,
+                        key="sales_today_download_btn"
                     )
                 else:
                     st.info("No product-level sales found for today.")
@@ -183,17 +184,17 @@ def render_tab(container, supabase, square_client, username, role, loc_list, t):
                         "Select Date",
                         value=date.today(),
                         min_value=cutoff_date,
-                        key="sales_hist_date"
+                        key="sales_hist_date_input"
                     )
                     
                     # ✅ Search filter by SKU or Name
                     search_query = st.text_input(
                         "🔍 Search Sales History",
                         placeholder="Enter SKU or Product Name...",
-                        key="sales_hist_search"
+                        key="sales_hist_search_input"
                     ).strip().lower()
                     
-                    search_all = st.checkbox("Search across all dates", value=False, key="sales_hist_all")
+                    search_all = st.checkbox("Search across all dates", value=False, key="sales_hist_all_checkbox")
                     
                     df_hist_filtered = df_hist.copy()
                     
@@ -219,9 +220,9 @@ def render_tab(container, supabase, square_client, username, role, loc_list, t):
                     
                     summary_hist = df_hist_filtered.groupby("Location").size().reset_index(name="Order Count")
                     st.subheader(f"📍 Orders per Location ({sel_date if not search_all else 'All Dates'})")
-                    st.table(summary_hist)
+                    st.table(summary_hist, key="sales_hist_summary_table")
                     
-                    st.dataframe(df_hist_filtered, width="stretch", hide_index=True)
+                    st.dataframe(df_hist_filtered, width="stretch", hide_index=True, key="sales_hist_df")
                 else:
                     st.info("No sales found after 03/20/2026.")
         

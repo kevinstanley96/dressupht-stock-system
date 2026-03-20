@@ -18,7 +18,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
         # 2. LOCATION SELECTOR FOR HISTORY VIEW
         st.subheader("Depot Activity History")
         if role in ["Admin","Manager"]:
-            view_loc = st.selectbox("Select Depot Location", ["All","Pv","Canape-Vert"], key="dep_hist_loc")
+            view_loc = st.selectbox("Select Depot Location", ["All","Pv","Canape-Vert"], key="depot_hist_loc_select")
         else:
             view_loc = loc_list[0] if loc_list else None
             if view_loc:
@@ -29,7 +29,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
             if view_loc != "All":
                 d_df = d_df[d_df['location'] == view_loc]
             st.dataframe(d_df[['Date','Wig Name','Type','Quantity','User','location']],
-                         width='stretch', hide_index=True)
+                         width='stretch', hide_index=True, key="depot_history_df")
         else:
             st.info("No activity recorded in the Depot yet.")
 
@@ -38,12 +38,13 @@ def render_tab(container, supabase, username, role, loc_list, t):
             st.divider()
             st.subheader("Log Depot Movement")
 
-            d_loc = st.selectbox("Select Location for Entry", ["Pv","Canape-Vert"], key="dep_entry_loc")
+            d_loc = st.selectbox("Select Location for Entry", ["Pv","Canape-Vert"], key="depot_entry_loc_select")
 
             # ✅ Library-style search
             d_search = st.text_input(
                 "🔍 Search Item for Depot",
-                placeholder="Search by SKU, Name, Token, or Category..."
+                placeholder="Search by SKU, Name, Token, or Category...",
+                key="depot_search_input"
             ).strip().lower()
 
             if d_search:
@@ -56,16 +57,16 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     options = match[['SKU','Full Name']].apply(
                         lambda x: f"{x['SKU']} - {x['Full Name']}", axis=1
                     ).tolist()
-                    selected_sku = st.selectbox("Select Item", options).split(" - ")[0]
+                    selected_sku = st.selectbox("Select Item", options, key="depot_item_select").split(" - ")[0]
                     d_item = match[match['SKU'] == selected_sku].iloc[0]
                     st.success(f"Selected: **{d_item['Full Name']}** ({d_item['SKU']})")
 
                     with st.form("depot_form", clear_on_submit=True):
-                        d_type = st.radio("Movement Type", ["Addition","Withdrawal"], horizontal=True)
-                        d_qty = st.number_input("Quantity", min_value=1, step=1)
-                        d_date = st.date_input("Date", value=date.today())
+                        d_type = st.radio("Movement Type", ["Addition","Withdrawal"], horizontal=True, key="depot_type_radio")
+                        d_qty = st.number_input("Quantity", min_value=1, step=1, key="depot_qty_input")
+                        d_date = st.date_input("Date", value=date.today(), key="depot_date_input")
 
-                        if st.form_submit_button("Confirm Depot Entry"):
+                        if st.form_submit_button("Confirm Depot Entry", key="depot_confirm_btn"):
                             dep_entry = {
                                 "Date": str(d_date),
                                 "SKU": str(d_item['SKU']),

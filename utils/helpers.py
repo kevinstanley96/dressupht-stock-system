@@ -126,10 +126,10 @@ LOCATION_MAP = {
 }
 
 # --- SAFE DATAFRAME DISPLAY ---
-def safe_dataframe(df, cols, empty_msg="No data available."):
+def safe_dataframe(df, cols, empty_msg="No data available.", key=None):
     """Safely display a dataframe with selected columns."""
     if df is not None and not df.empty:
-        st.dataframe(df[cols], width="stretch", hide_index=True)
+        st.dataframe(df[cols], width="stretch", hide_index=True, key=key)
     else:
         st.info(empty_msg)
 

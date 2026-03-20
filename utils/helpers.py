@@ -274,8 +274,8 @@ def sync_inventory(location_name):
                                     new_qty = current.data[0]["Stock"] - qty_sold
                                     supabase.table("Master_Inventory").update({"Stock": new_qty}).eq("Full Name", product_name).execute()
 
-                        # ✅ Log into Sales table with upsert
-                        supabase.table("Sales").upsert({
+                        # ✅ Log into sales table with upsert
+                        supabase.table("sales").upsert({
                             "order_id": order.id,
                             "location": location_name,
                             "product_token": product_token if product_token else None,

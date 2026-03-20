@@ -10,6 +10,12 @@ from square import Square
 from square.environment import SquareEnvironment
 import pytz
 
+# Import the global supabase client
+from utils.supabase_client import supabase
+
+# Import the Square client
+from utils.square_client import square_client
+
 # --- Timezone ---
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 

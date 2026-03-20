@@ -32,21 +32,21 @@ def render_sidebar(username, role, loc_list, supabase):
         file_cv = st.file_uploader(
             "Upload Canape-Vert file",
             type=["xlsx"],
-            key="file_cv_uploader"
+            key="sidebar_file_cv_uploader"
         )
         
         file_pv = st.file_uploader(
             "Upload PV file",
             type=["xlsx"],
-            key="file_pv_uploader"
+            key="sidebar_file_pv_uploader"
         )
 
         if file_cv and file_pv:
             combined_df = clean_and_combine(file_cv, file_pv)
             st.info("Preview of combined inventory before overwrite:")
-            st.dataframe(combined_df.head(20), key="preview_combined_df")
+            st.dataframe(combined_df.head(20), key="sidebar_preview_combined_df")
 
-        if st.button("🚀 Overwrite & Sync", use_container_width=True, key="overwrite_sync_btn") and file_cv and file_pv:
+        if st.button("🚀 Overwrite & Sync", use_container_width=True, key="sidebar_overwrite_sync_btn") and file_cv and file_pv:
             try:
                 progress = st.progress(0)
                 progress.progress(20)
@@ -94,16 +94,16 @@ def render_sidebar(username, role, loc_list, supabase):
     # --- SYNC BUTTONS ---
     st.header("🔄 Inventory Sync")
     
-    if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
+    if st.button("Sync Inventory - Dressupht Pv", key="sidebar_sync_pv_btn"):
         sync_inventory("Dressupht Pv")
     
-    if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
+    if st.button("Sync Inventory - Canape-Vert", key="sidebar_sync_cv_btn"):
         sync_inventory("Canape-Vert")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):
         st.divider()
-        if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
+        if st.button("🚪 Logout", use_container_width=True, key="sidebar_logout_btn"):
             st.session_state.authenticated = False
             st.session_state.username = None
             st.session_state.role = None

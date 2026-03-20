@@ -51,15 +51,6 @@ tab_list = role_tabs.get(role, ["Library", "Password"])
 tabs = st.tabs(tab_list)
 tab_dict = {name: tabs[i] for i, name in enumerate(tab_list)}
 
-# --- Sidebar: operational tools + role indicator ---
-with st.sidebar:
-    st.markdown("### 👤 User Info")
-    st.write(f"**Role:** {role}")
-    st.write(f"**Allowed Tabs:** {', '.join(tab_list)}")
-    st.write(f"**Locations:** {', '.join(loc_list) if loc_list else 'None'}")
-    st.divider()
-    render_sidebar(username, role, loc_list, supabase)
-
 # --- Render Tabs (only those allowed) ---
 if "Library" in tab_dict:
     library.render_tab(tab_dict["Library"], supabase, username, role, loc_list, t)

@@ -17,10 +17,10 @@ def render_tab(container, supabase, username, role, loc_list, t):
 
         # 2. LOCATION SELECTOR FOR HISTORY VIEW
         st.subheader("Current Wigs on Display")
-        if role in ["Admin","Manager"]:
+        if role in ["Admin", "Manager"]:
             view_loc = st.selectbox(
                 "Select Display Location",
-                ["All","Pv","Canape-Vert"],
+                ["All", "Pv", "Canape-Vert"],
                 key="mannequin_hist_loc_select"
             )
         else:
@@ -41,23 +41,32 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 m_df = m_df[m_df['location'] == view_loc]
 
             if compact_view:
-                safe_dataframe(m_df, ['Full Name','Quantity'], "No wigs currently on display.", key="mannequin_compact_df")
+                safe_dataframe(
+                    m_df,
+                    ['Full Name', 'Quantity'],
+                    "No wigs currently on display.",
+                    key="mannequin_compact_df"
+                )
             else:
-                safe_dataframe(m_df, ['SKU','Full Name','Quantity','Last_Updated','location'],
-                               "No wigs currently on display.", key="mannequin_full_df")
+                safe_dataframe(
+                    m_df,
+                    ['SKU', 'Full Name', 'Quantity', 'Last_Updated', 'location'],
+                    "No wigs currently on display.",
+                    key="mannequin_full_df"
+                )
 
             st.caption(f"Total Items on Display: {int(m_df['Quantity'].sum())}")
         else:
             st.info("No wigs currently on display.")
 
         # 3. LOGGING FORM (Admins/Managers only)
-        if role in ["Admin","Manager"]:
+        if role in ["Admin", "Manager"]:
             st.divider()
             st.subheader("Add/Update Display")
 
             m_loc = st.selectbox(
                 "Select Location for Entry",
-                ["Pv","Canape-Vert"],
+                ["Pv", "Canape-Vert"],
                 key="mannequin_entry_loc_select"
             )
 
@@ -75,7 +84,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
 
                 match = search_inventory(inv_df, m_search)
                 if not match.empty:
-                    options = match[['SKU','Full Name']].apply(
+                    options = match[['SKU', 'Full Name']].apply(
                         lambda x: f"{x['SKU']} - {x['Full Name']}", axis=1
                     ).tolist()
                     selected_sku = st.selectbox(
@@ -88,7 +97,13 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     st.success(f"Selected: **{m_item['Full Name']}** ({m_item['SKU']})")
 
                     with st.form("mannequin_form", clear_on_submit=True):
-                        m_qty = st.number_input("Quantity", min_value=1, max_value=2, step=1, key="mannequin_qty_input")
+                        m_qty = st.number_input(
+                            "Quantity",
+                            min_value=1,
+                            max_value=2,
+                            step=1,
+                            key="mannequin_qty_input"
+                        )
                         if st.form_submit_button("🚀 Set on Mannequin", key="mannequin_submit_btn"):
                             man_entry = {
                                 "SKU": str(m_item['SKU']),
@@ -102,6 +117,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                             # Insert new entry
                             supabase.table("Mannequin").insert(man_entry).execute()
                             st.success(f"Updated display for {m_item['Full Name']} at {m_loc}!")
-                            time.sleep(1); st.rerun()
+                            time.sleep(1)
+                            st.rerun()
                 else:
                     st.error("No item found in Master Inventory.")

@@ -40,20 +40,38 @@ st.info(f"Logged in as {username} ({role}) — Locations: {', '.join(loc_list) i
 with st.sidebar:
     render_sidebar(username, role, loc_list, supabase)
 
-# --- Tab Layout ---
-tab_dict = st.tabs([
-    "Library", "Arrival", "Inventory", "Depot", "Mannequin",
-    "Compare", "Transfer", "Sales", "Admin", "Password"
-])
+# --- TABS SETUP BASED ON ROLE ---
+role_tabs = {
+    "Staff":   ["Library", "Mannequin", "Password"],
+    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Password"],
+    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Password"]
+}
 
-# --- Render Tabs ---
-library.render_tab(tab_dict[0], supabase, username, role, loc_list, t)
-arrival.render_tab(tab_dict[1], supabase, username, role, loc_list, t)
-inventory.render_tab(tab_dict[2], supabase, username, role, loc_list, t)
-depot.render_tab(tab_dict[3], supabase, username, role, loc_list, t)
-mannequin.render_tab(tab_dict[4], supabase, username, role, loc_list, t)
-compare.render_tab(tab_dict[5], supabase, username, role, loc_list, t)
-transfer.render_tab(tab_dict[6], supabase, username, role, loc_list, t)
-sales.render_tab(tab_dict[7], supabase, square_client, username, role, loc_list, t)
-admin.render_tab(tab_dict[8], supabase, username, role, loc_list, t)
-password.render_tab(tab_dict[9], supabase, username, role, loc_list, t)
+# Fallback if role not in dict
+tab_list = role_tabs.get(role, ["Library", "Password"])
+
+# Create tabs only for allowed list
+tabs = st.tabs(tab_list)
+tab_dict = {name: tabs[i] for i, name in enumerate(tab_list)}
+
+# --- Render Tabs (only those allowed) ---
+if "Library" in tab_dict:
+    library.render_tab(tab_dict["Library"], supabase, username, role, loc_list, t)
+if "Arrival" in tab_dict:
+    arrival.render_tab(tab_dict["Arrival"], supabase, username, role, loc_list, t)
+if "Inventory" in tab_dict:
+    inventory.render_tab(tab_dict["Inventory"], supabase, username, role, loc_list, t)
+if "Depot" in tab_dict:
+    depot.render_tab(tab_dict["Depot"], supabase, username, role, loc_list, t)
+if "Mannequin" in tab_dict:
+    mannequin.render_tab(tab_dict["Mannequin"], supabase, username, role, loc_list, t)
+if "Compare" in tab_dict:
+    compare.render_tab(tab_dict["Compare"], supabase, username, role, loc_list, t)
+if "Transfer" in tab_dict:
+    transfer.render_tab(tab_dict["Transfer"], supabase, username, role, loc_list, t)
+if "Sales" in tab_dict:
+    sales.render_tab(tab_dict["Sales"], supabase, square_client, username, role, loc_list, t)
+if "Admin" in tab_dict:
+    admin.render_tab(tab_dict["Admin"], supabase, username, role, loc_list, t)
+if "Password" in tab_dict:
+    password.render_tab(tab_dict["Password"], supabase, username, role, loc_list, t)

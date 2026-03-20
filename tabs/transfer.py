@@ -10,7 +10,7 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
 
         # --- Transfer history ---
         try:
-            t_query = supabase.table("transfer").select("*").order("Date", desc=True).execute()
+            t_query = supabase.table("Transfer").select("*").order("Date", desc=True).execute()
             t_df = pd.DataFrame(t_query.data) if t_query.data else pd.DataFrame()
         except Exception as e:
             t_df = pd.DataFrame()
@@ -63,7 +63,7 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                                 "to_location": "Canape-Vert",
                                 "User": username
                             }
-                            supabase.table("transfer").insert(transfer_entry).execute()
+                            supabase.table("Transfer").insert(transfer_entry).execute()
                             st.success(
                                 f"Transferred {t_qty} units of {t_item['Full Name']} from PV to Canape-Vert"
                             )

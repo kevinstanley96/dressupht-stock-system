@@ -26,7 +26,7 @@ def render_sidebar(username, role, loc_list, supabase):
     else:
         st.info("No syncs logged yet.")
 
-    # --- MISE Upload + Overwrite ---
+    # --- MISE Upload + Overwrite (Admin/Manager only) ---
     if role in ["Admin", "Manager"]:
         st.subheader("📂 Upload Square Export Files")
         file_cv = st.file_uploader(
@@ -91,14 +91,15 @@ def render_sidebar(username, role, loc_list, supabase):
             except Exception as e:
                 st.error(f"❌ Error during overwrite & sync: {e}")
 
-    # --- SYNC BUTTONS ---
-    st.header("🔄 Inventory Sync")
-    
-    if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
-        sync_inventory("Dressupht Pv")
-    
-    if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
-        sync_inventory("Canape-Vert")
+    # --- SYNC BUTTONS (Admin/Manager only) ---
+    if role in ["Admin", "Manager"]:
+        st.header("🔄 Inventory Sync")
+        
+        if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
+            sync_inventory("Dressupht Pv")
+        
+        if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
+            sync_inventory("Canape-Vert")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):

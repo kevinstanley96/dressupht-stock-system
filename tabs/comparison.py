@@ -28,14 +28,14 @@ def render_tab(tab, supabase, username, role, loc_list, t):
 
         # --- Comparison Logic ---
         if square_file_cv and square_file_pv:
-            # Read Square files
-            square_cv = pd.read_excel(square_file_cv)
-            square_pv = pd.read_excel(square_file_pv)
+            # Read Square files with headers on row 2 (index=1)
+            square_cv = pd.read_excel(square_file_cv, header=1)
+            square_pv = pd.read_excel(square_file_pv, header=1)
 
             # Filter wigs only
             wigs_master = master_df[master_df["Category"].str.contains("wig", case=False, na=False)]
-            wigs_cv = square_cv[square_cv["Category"].str.contains("wig", case=False, na=False)]
-            wigs_pv = square_pv[square_pv["Category"].str.contains("wig", case=False, na=False)]
+            wigs_cv = square_cv[square_cv["Categories"].str.contains("wig", case=False, na=False)]
+            wigs_pv = square_pv[square_pv["Categories"].str.contains("wig", case=False, na=False)]
 
             # Compare stock per location
             st.subheader("🔍 Inconsistencies - Canapé-Vert")

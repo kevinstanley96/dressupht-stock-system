@@ -8,7 +8,7 @@ from utils.sidebar import render_sidebar
 import base64
 
 # Import all tab modules
-from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password, graphs, comparison
+from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password, graphs
 
 # --- App Setup ---
 st.set_page_config(
@@ -48,7 +48,7 @@ with st.sidebar:
 role_tabs = {
     "Staff":   ["Library", "Mannequin", "Password"],
     "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Graphs", "Password"],
-    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Graphs", "Comparison", "Password"]
+    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Graphs", "Password"]
 }
 
 tab_list = role_tabs.get(role, ["Library", "Password"])
@@ -78,5 +78,3 @@ if "Password" in tab_dict:
     password.render_tab(tab_dict["Password"], supabase, username, role, loc_list, t)
 if "Graphs" in tab_dict:
     graphs.render_tab(tab_dict["Graphs"], supabase, username, role, loc_list, t)
-if "Comparison" in tab_dict:
-    comparison.render_tab(tab_dict["Comparison"], supabase, username, role, loc_list, t)

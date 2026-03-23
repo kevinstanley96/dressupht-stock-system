@@ -34,7 +34,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                     y="Stock",
                     tooltip=["Category", "Stock"]
                 ).properties(width=600, height=400)
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')
             else:
                 st.info("Category/Stock columns not found in data.")
 
@@ -57,7 +57,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                         tooltip=["Date", "Sync Events"]
                     ).properties(width=600, height=400)
 
-                    st.altair_chart(chart, use_container_width=True)
+                    st.altair_chart(chart, width='stretch')
                 else:
                     st.info("'synced_at' column not found in sync_log.")
             else:
@@ -86,7 +86,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                         tooltip=["product_name", "quantity"]
                     ).properties(width=600, height=400)
 
-                    st.altair_chart(chart, use_container_width=True)
+                    st.altair_chart(chart, width='stretch')
                 else:
                     st.info("product_name/quantity columns not found in Sales data.")
             else:
@@ -105,7 +105,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                     tooltip=["Location", "Stock"]
                 ).properties(width=600, height=400)
 
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')
 
                 pie = alt.Chart(location_stock).mark_arc().encode(
                     theta="Stock:Q",
@@ -113,7 +113,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                     tooltip=["Location", "Stock"]
                 ).properties(width=400, height=400)
 
-                st.altair_chart(pie, use_container_width=True)
+                st.altair_chart(pie, width='stretch')
             else:
                 st.info("Location/Stock columns not found in data.")
 
@@ -135,7 +135,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                         tooltip=["Full Name", "Stock"]
                     ).properties(width=600, height=400)
 
-                    st.altair_chart(chart, use_container_width=True)
+                    st.altair_chart(chart, width='stretch')
                 else:
                     st.success("All items are above the stock threshold.")
             else:

@@ -70,7 +70,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             st.subheader("Top 10 Best-Selling Items")
 
             # Fetch sales data
-            sales_response = supabase.table("Sales").select("item_name, quantity").execute()
+            sales_response = supabase.table("Sales").select("product_name, quantity").execute()
             if sales_response.data:
                 sales_df = pd.DataFrame(sales_response.data)
                 st.write("Sales columns:", sales_df.columns.tolist())  # Debugging line

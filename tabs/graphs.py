@@ -100,12 +100,12 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             st.subheader("Location Comparison")
 
             if "Location" in df.columns and "Stock" in df.columns:
-                location_stock = df.groupby("location")["stock"].sum().reset_index()
+                location_stock = df.groupby("Location")["Stock"].sum().reset_index()
 
                 chart = alt.Chart(location_stock).mark_bar().encode(
                     x="Location:N",
                     y="Stock:Q",
-                    tooltip=["location", "stock"]
+                    tooltip=["Location", "Stock"]
                 ).properties(width=600, height=400)
 
                 st.altair_chart(chart, use_container_width=True)
@@ -113,7 +113,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                 pie = alt.Chart(location_stock).mark_arc().encode(
                     theta="Stock:Q",
                     color="Location:N",
-                    tooltip=["location", "stock"]
+                    tooltip=["Location", "Stock"]
                 ).properties(width=400, height=400)
 
                 st.altair_chart(pie, use_container_width=True)

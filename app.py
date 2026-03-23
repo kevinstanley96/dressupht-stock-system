@@ -79,4 +79,4 @@ if "Password" in tab_dict:
 if "Graphs" in tab_dict:
     graphs.render_tab(tab_dict["Graphs"], supabase, username, role, loc_list, t)
 if "Comparison" in tab_dict:
-graphs.render_tab(tab_dict["Comparison"], supabase, username, role, loc_list, t)
+    graphs.render_tab(tab_dict["Comparison"], supabase, username, role, loc_list, t)

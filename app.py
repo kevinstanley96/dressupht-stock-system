@@ -17,6 +17,24 @@ st.set_page_config(
     layout="wide"
 )
 
+# --- Sticky Tabs CSS ---
+st.markdown(
+    """
+    <style>
+    /* Make the tab bar sticky at the top */
+    .stTabs [role="tablist"] {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background-color: white; /* match your app background */
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- Sidebar: Language selector only ---
 language = st.sidebar.selectbox("🌐 Language / Langue", ["en", "fr"], index=0)
 t = get_translations(language)

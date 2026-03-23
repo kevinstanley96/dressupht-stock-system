@@ -13,6 +13,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             return
 
         df = pd.DataFrame(response.data)
+        st.write("Master_Inventory columns:", df.columns.tolist())  # Debugging line
 
         # --- Create subtabs ---
         subtab_names = [
@@ -27,16 +28,16 @@ def render_tab(tab, supabase, username, role, loc_list, t):
         # --- 1. Stock by Category ---
         with subtabs[0]:
             st.subheader("Stock by Category")
-            if "Category" in df.columns and "Stock" in df.columns:
-                category_stock = df.groupby("Category")["Stock"].sum().reset_index()
+            if "category" in df.columns and "stock" in df.columns:
+                category_stock = df.groupby("category")["stock"].sum().reset_index()
                 chart = alt.Chart(category_stock).mark_bar().encode(
-                    x=alt.X("Category", sort="-y"),
-                    y="Stock",
-                    tooltip=["Category", "Stock"]
+                    x=alt.X("category", sort="-y"),
+                    y="stock",
+                    tooltip=["category", "stock"]
                 ).properties(width=600, height=400)
                 st.altair_chart(chart, use_container_width=True)
             else:
-                st.info("Category/Stock columns not found in data.")
+                st.info("category/stock columns not found in data.")
 
         # --- 2. Inventory Trend Over Time ---
         with subtabs[1]:
@@ -46,6 +47,8 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             sync_response = supabase.table("sync_log").select("synced_at, location, type").order("synced_at").execute()
             if sync_response.data:
                 sync_df = pd.DataFrame(sync_response.data)
+                st.write("Sync Log columns:", sync_df.columns.tolist())  # Debugging line
+
                 sync_df["synced_at"] = pd.to_datetime(sync_df["synced_at"], errors="coerce")
 
                 # Count syncs per day
@@ -70,6 +73,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             sales_response = supabase.table("Sales").select("item_name, quantity").execute()
             if sales_response.data:
                 sales_df = pd.DataFrame(sales_response.data)
+                st.write("Sales columns:", sales_df.columns.tolist())  # Debugging line
 
                 # Aggregate sales by item
                 top_items = (
@@ -94,50 +98,48 @@ def render_tab(tab, supabase, username, role, loc_list, t):
         with subtabs[3]:
             st.subheader("Location Comparison")
 
-            # Check if location + stock columns exist
-            if "Location" in df.columns and "Stock" in df.columns:
-                location_stock = df.groupby("Location")["Stock"].sum().reset_index()
+            if "location" in df.columns and "stock" in df.columns:
+                location_stock = df.groupby("location")["stock"].sum().reset_index()
 
                 chart = alt.Chart(location_stock).mark_bar().encode(
-                    x="Location:N",
-                    y="Stock:Q",
-                    tooltip=["Location", "Stock"]
+                    x="location:N",
+                    y="stock:Q",
+                    tooltip=["location", "stock"]
                 ).properties(width=600, height=400)
 
                 st.altair_chart(chart, use_container_width=True)
 
                 # Optional: Pie chart version
                 pie = alt.Chart(location_stock).mark_arc().encode(
-                    theta="Stock:Q",
-                    color="Location:N",
-                    tooltip=["Location", "Stock"]
+                    theta="stock:Q",
+                    color="location:N",
+                    tooltip=["location", "stock"]
                 ).properties(width=400, height=400)
 
                 st.altair_chart(pie, use_container_width=True)
             else:
-                st.info("Location/Stock columns not found in data.")
+                st.info("location/stock columns not found in data.")
 
         # --- 5. Stock Alerts ---
         with subtabs[4]:
             st.subheader("Stock Alerts")
 
-            # Define threshold for low stock
-            threshold = 5
+            threshold = st.slider("Low stock threshold", 1, 20, 5)
 
-            if "Item_Name" in df.columns and "Stock" in df.columns:
-                low_stock = df[df["Stock"] <= threshold]
+            if "item_name" in df.columns and "stock" in df.columns:
+                low_stock = df[df["stock"] <= threshold]
 
                 if not low_stock.empty:
                     st.warning(f"{len(low_stock)} items are below the stock threshold ({threshold}).")
 
                     chart = alt.Chart(low_stock).mark_bar(color="red").encode(
-                        x="Item_Name:N",
-                        y="Stock:Q",
-                        tooltip=["Item_Name", "Stock"]
+                        x="item_name:N",
+                        y="stock:Q",
+                        tooltip=["item_name", "stock"]
                     ).properties(width=600, height=400)
 
                     st.altair_chart(chart, use_container_width=True)
                 else:
                     st.success("All items are above the stock threshold.")
             else:
-                st.info("Item_Name/Stock columns not found in data.")
+                st.info("item_name/stock columns not found in data.")

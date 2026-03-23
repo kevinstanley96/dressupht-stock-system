@@ -38,10 +38,28 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             else:
                 st.info("Category/Stock columns not found in data.")
 
-        # --- 2. Inventory Trend (placeholder for now) ---
+        # --- 2. Inventory Trend Over Time ---
         with subtabs[1]:
             st.subheader("Inventory Trend Over Time")
-            st.info("Line chart will go here.")
+
+            # Ensure we have a date column
+            if "updated_at" in df.columns and "Stock" in df.columns:
+                # Convert to datetime
+                df["updated_at"] = pd.to_datetime(df["updated_at"], errors="coerce")
+
+                # Group by date (day-level granularity)
+                trend = df.groupby(df["updated_at"].dt.date)["Stock"].sum().reset_index()
+                trend.rename(columns={"updated_at": "Date"}, inplace=True)
+
+                chart = alt.Chart(trend).mark_line(point=True).encode(
+                    x="Date:T",
+                    y="Stock:Q",
+                    tooltip=["Date", "Stock"]
+                ).properties(width=600, height=400)
+
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.info("No 'updated_at' or 'Stock' column found in data.")
 
         # --- 3. Top 10 Best-Sellers (placeholder) ---
         with subtabs[2]:

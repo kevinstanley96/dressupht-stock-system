@@ -71,10 +71,10 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             if sales_response.data:
                 sales_df = pd.DataFrame(sales_response.data)
         
-                if {"product_name", "quantity", "Location"} <= set(sales_df.columns):
+                if {"product_name", "quantity", "location"} <= set(sales_df.columns):
                     # Group by product and location
                     grouped = (
-                        sales_df.groupby(["Location", "product_name"])["quantity"]
+                        sales_df.groupby(["location", "product_name"])["quantity"]
                         .sum()
                         .reset_index()
                     )
@@ -83,7 +83,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                     for loc in ["Canapé-Vert", "PV"]:
                         st.markdown(f"**{loc}**")
                         top_items = (
-                            grouped[grouped["Location"] == loc]
+                            grouped[grouped["location"] == loc]
                             .sort_values("quantity", ascending=False)
                             .head(10)
                         )

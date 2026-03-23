@@ -62,10 +62,33 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             else:
                 st.info("No sync log data available.")
 
-        # --- 3. Top 10 Best-Sellers (placeholder) ---
+        # --- 3. Top 10 Best-Selling Items ---
         with subtabs[2]:
             st.subheader("Top 10 Best-Selling Items")
-            st.info("Horizontal bar chart will go here.")
+
+            # Fetch sales data
+            sales_response = supabase.table("Sales").select("item_name, quantity").execute()
+            if sales_response.data:
+                sales_df = pd.DataFrame(sales_response.data)
+
+                # Aggregate sales by item
+                top_items = (
+                    sales_df.groupby("item_name")["quantity"]
+                    .sum()
+                    .reset_index()
+                    .sort_values("quantity", ascending=False)
+                    .head(10)
+                )
+
+                chart = alt.Chart(top_items).mark_bar().encode(
+                    x="quantity:Q",
+                    y=alt.Y("item_name:N", sort="-x"),
+                    tooltip=["item_name", "quantity"]
+                ).properties(width=600, height=400)
+
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.info("No sales data available.")
 
         # --- 4. Location Comparison (placeholder) ---
         with subtabs[3]:

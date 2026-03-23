@@ -47,8 +47,8 @@ with st.sidebar:
 # --- TABS SETUP BASED ON ROLE ---
 role_tabs = {
     "Staff":   ["Library", "Mannequin", "Password"],
-    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Password"],
-    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Password"]
+    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Graphs", "Password"],
+    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Graphs", "Password"]
 }
 
 tab_list = role_tabs.get(role, ["Library", "Password"])
@@ -76,3 +76,5 @@ if "Admin" in tab_dict:
     admin.render_tab(tab_dict["Admin"], supabase, username, role, loc_list, t)
 if "Password" in tab_dict:
     password.render_tab(tab_dict["Password"], supabase, username, role, loc_list, t)
+if "Graphs" in tab_dict:
+    graphs.render_tab(tab_dict["Graphs"], supabase, username, role, loc_list, t)

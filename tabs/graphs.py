@@ -48,13 +48,14 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                 sync_df = pd.DataFrame(sync_response.data)
                 sync_df["synced_at"] = pd.to_datetime(sync_df["synced_at"], errors="coerce")
 
-                # Count syncs per day as a proxy for trend
+                # Count syncs per day
                 trend = sync_df.groupby(sync_df["synced_at"].dt.date).size().reset_index(name="Sync Events")
+                trend.rename(columns={"synced_at": "Date"}, inplace=True)
 
                 chart = alt.Chart(trend).mark_line(point=True).encode(
-                    x="synced_at:T",
+                    x="Date:T",
                     y="Sync Events:Q",
-                    tooltip=["synced_at", "Sync Events"]
+                    tooltip=["Date", "Sync Events"]
                 ).properties(width=600, height=400)
 
                 st.altair_chart(chart, use_container_width=True)

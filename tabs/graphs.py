@@ -90,12 +90,54 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             else:
                 st.info("No sales data available.")
 
-        # --- 4. Location Comparison (placeholder) ---
+        # --- 4. Location Comparison ---
         with subtabs[3]:
             st.subheader("Location Comparison")
-            st.info("Grouped bar or pie chart will go here.")
 
-        # --- 5. Stock Alerts (placeholder) ---
+            # Check if location + stock columns exist
+            if "Location" in df.columns and "Stock" in df.columns:
+                location_stock = df.groupby("Location")["Stock"].sum().reset_index()
+
+                chart = alt.Chart(location_stock).mark_bar().encode(
+                    x="Location:N",
+                    y="Stock:Q",
+                    tooltip=["Location", "Stock"]
+                ).properties(width=600, height=400)
+
+                st.altair_chart(chart, use_container_width=True)
+
+                # Optional: Pie chart version
+                pie = alt.Chart(location_stock).mark_arc().encode(
+                    theta="Stock:Q",
+                    color="Location:N",
+                    tooltip=["Location", "Stock"]
+                ).properties(width=400, height=400)
+
+                st.altair_chart(pie, use_container_width=True)
+            else:
+                st.info("Location/Stock columns not found in data.")
+
+        # --- 5. Stock Alerts ---
         with subtabs[4]:
             st.subheader("Stock Alerts")
-            st.info("Gauge or highlight chart will go here.")
+
+            # Define threshold for low stock
+            threshold = 5
+
+            if "Item_Name" in df.columns and "Stock" in df.columns:
+                low_stock = df[df["Stock"] <= threshold]
+
+                if not low_stock.empty:
+                    st.warning(f"{len(low_stock)} items are below the stock threshold ({threshold}).")
+
+                    chart = alt.Chart(low_stock).mark_bar(color="red").encode(
+                        x="Item_Name:N",
+                        y="Stock:Q",
+                        tooltip=["Item_Name", "Stock"]
+                    ).properties(width=600, height=400)
+
+                    st.altair_chart(chart, use_container_width=True)
+                else:
+                    st.success("All items are above the stock threshold.")
+            else:
+                st.info("Item_Name/Stock columns not found in data.")

@@ -17,7 +17,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Sticky Tabs CSS ---
+# --- Sticky Tabs CSS with Shadow ---
 st.markdown(
     """
     <style>
@@ -29,6 +29,8 @@ st.markdown(
         background-color: white; /* match your app background */
         padding-top: 0.5rem;
         padding-bottom: 0.5rem;
+        border-bottom: 1px solid #ddd; /* subtle divider */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* soft shadow */
     }
     </style>
     """,

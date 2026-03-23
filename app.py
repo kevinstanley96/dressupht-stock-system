@@ -21,8 +21,8 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Make the tab bar sticky at the top */
-    .stTabs [role="tablist"] {
+    /* Target the tab bar container */
+    div[data-testid="stTabs"] > div[role="tablist"] {
         position: sticky;
         top: 0;
         z-index: 999;
@@ -31,6 +31,12 @@ st.markdown(
         padding-bottom: 0.5rem;
         border-bottom: 1px solid #ddd; /* subtle divider */
         box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* soft shadow */
+    }
+
+    /* Optional: highlight active tab */
+    div[data-testid="stTabs"] button[aria-selected="true"] {
+        border-bottom: 3px solid #0078d4; /* Microsoft blue highlight */
+        font-weight: bold;
     }
     </style>
     """,

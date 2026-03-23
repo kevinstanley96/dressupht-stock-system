@@ -13,7 +13,6 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             return
 
         df = pd.DataFrame(response.data)
-        st.write("Master_Inventory columns:", df.columns.tolist())  # Debugging line
 
         # --- Create subtabs ---
         subtab_names = [
@@ -46,7 +45,6 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             sync_response = supabase.table("sync_log").select("*").order("synced_at").execute()
             if sync_response.data:
                 sync_df = pd.DataFrame(sync_response.data)
-                st.write("Sync Log columns:", sync_df.columns.tolist())  # Debugging line
 
                 if "synced_at" in sync_df.columns:
                     sync_df["synced_at"] = pd.to_datetime(sync_df["synced_at"], errors="coerce")
@@ -72,7 +70,6 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             sales_response = supabase.table("Sales").select("*").execute()
             if sales_response.data:
                 sales_df = pd.DataFrame(sales_response.data)
-                st.write("Sales columns:", sales_df.columns.tolist())  # Debugging line
 
                 if "product_name" in sales_df.columns and "quantity" in sales_df.columns:
                     top_items = (

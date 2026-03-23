@@ -7,7 +7,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
         st.title("📊 Graphs Dashboard")
 
         # --- Fetch inventory data ---
-        response = supabase.table("master_inventory").select("*").execute()
+        response = supabase.table("Master_Inventory").select("*").execute()
         if not response.data:
             st.warning("No inventory data available.")
             return
@@ -69,7 +69,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
         with subtabs[2]:
             st.subheader("Top 10 Best-Selling Items")
 
-            sales_response = supabase.table("sales").select("*").execute()
+            sales_response = supabase.table("Sales").select("*").execute()
             if sales_response.data:
                 sales_df = pd.DataFrame(sales_response.data)
                 st.write("Sales columns:", sales_df.columns.tolist())  # Debugging line

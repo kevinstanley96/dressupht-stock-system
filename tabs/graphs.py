@@ -35,9 +35,9 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                     y="Stock",
                     tooltip=["Category", "Stock"]
                 ).properties(width=600, height=400)
-                st.altair_chart(chart, width=True)
+                st.altair_chart(chart, use_container_width=True)
             else:
-                st.info("category/stock columns not found in data.")
+                st.info("Category/Stock columns not found in data.")
 
         # --- 2. Inventory Trend Over Time ---
         with subtabs[1]:
@@ -118,7 +118,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
 
                 st.altair_chart(pie, use_container_width=True)
             else:
-                st.info("location/stock columns not found in data.")
+                st.info("Location/Stock columns not found in data.")
 
         # --- 5. Stock Alerts ---
         with subtabs[4]:
@@ -126,7 +126,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
 
             threshold = st.slider("Low stock threshold", 1, 20, 5)
 
-            if "Full Name" in df.columns and "stock" in df.columns:
+            if "Full Name" in df.columns and "Stock" in df.columns:
                 low_stock = df[df["Stock"] <= threshold]
 
                 if not low_stock.empty:
@@ -134,7 +134,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
 
                     chart = alt.Chart(low_stock).mark_bar(color="red").encode(
                         x="Full Name:N",
-                        y="stock:Q",
+                        y="Stock:Q",
                         tooltip=["Full Name", "Stock"]
                     ).properties(width=600, height=400)
 
@@ -142,4 +142,4 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                 else:
                     st.success("All items are above the stock threshold.")
             else:
-                st.info("product_name/stock columns not found in data.")
+                st.info("Full Name/Stock columns not found in data.")

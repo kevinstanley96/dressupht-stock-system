@@ -8,7 +8,7 @@ from utils.sidebar import render_sidebar
 import base64
 
 # Import all tab modules
-from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password
+from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password, graphs
 
 # --- App Setup ---
 st.set_page_config(

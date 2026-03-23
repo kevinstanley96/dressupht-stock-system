@@ -28,14 +28,14 @@ def render_tab(tab, supabase, username, role, loc_list, t):
         # --- 1. Stock by Category ---
         with subtabs[0]:
             st.subheader("Stock by Category")
-            if "category" in df.columns and "stock" in df.columns:
-                category_stock = df.groupby("category")["stock"].sum().reset_index()
+            if "Category" in df.columns and "Stock" in df.columns:
+                category_stock = df.groupby("Category")["Stock"].sum().reset_index()
                 chart = alt.Chart(category_stock).mark_bar().encode(
-                    x=alt.X("category", sort="-y"),
-                    y="stock",
-                    tooltip=["category", "stock"]
+                    x=alt.X("Category", sort="-y"),
+                    y="Stock",
+                    tooltip=["Category", "Stock"]
                 ).properties(width=600, height=400)
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width=True)
             else:
                 st.info("category/stock columns not found in data.")
 
@@ -99,20 +99,20 @@ def render_tab(tab, supabase, username, role, loc_list, t):
         with subtabs[3]:
             st.subheader("Location Comparison")
 
-            if "location" in df.columns and "stock" in df.columns:
+            if "Location" in df.columns and "Stock" in df.columns:
                 location_stock = df.groupby("location")["stock"].sum().reset_index()
 
                 chart = alt.Chart(location_stock).mark_bar().encode(
-                    x="location:N",
-                    y="stock:Q",
+                    x="Location:N",
+                    y="Stock:Q",
                     tooltip=["location", "stock"]
                 ).properties(width=600, height=400)
 
                 st.altair_chart(chart, use_container_width=True)
 
                 pie = alt.Chart(location_stock).mark_arc().encode(
-                    theta="stock:Q",
-                    color="location:N",
+                    theta="Stock:Q",
+                    color="Location:N",
                     tooltip=["location", "stock"]
                 ).properties(width=400, height=400)
 
@@ -126,16 +126,16 @@ def render_tab(tab, supabase, username, role, loc_list, t):
 
             threshold = st.slider("Low stock threshold", 1, 20, 5)
 
-            if "product_name" in df.columns and "stock" in df.columns:
-                low_stock = df[df["stock"] <= threshold]
+            if "Full Name" in df.columns and "stock" in df.columns:
+                low_stock = df[df["Stock"] <= threshold]
 
                 if not low_stock.empty:
                     st.warning(f"{len(low_stock)} items are below the stock threshold ({threshold}).")
 
                     chart = alt.Chart(low_stock).mark_bar(color="red").encode(
-                        x="product_name:N",
+                        x="Full Name:N",
                         y="stock:Q",
-                        tooltip=["product_name", "stock"]
+                        tooltip=["Full Name", "Stock"]
                     ).properties(width=600, height=400)
 
                     st.altair_chart(chart, use_container_width=True)

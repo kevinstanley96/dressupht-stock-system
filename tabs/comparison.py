@@ -15,16 +15,22 @@ def render_tab(tab, supabase, username, role, loc_list, t):
 
         # --- Uploaders for Square files ---
         st.subheader("Upload Square Excel files")
-        square_file = st.file_uploader(
-            "Square Export (Excel)",
+        square_file_cv = st.file_uploader(
+            "Square Export - Canapé-Vert",
             type=["xlsx"],
-            key="comparison_square_file"
+            key="comparison_square_cv"
+        )
+        square_file_pv = st.file_uploader(
+            "Square Export - PV",
+            type=["xlsx"],
+            key="comparison_square_pv"
         )
 
         # --- Comparison Logic ---
-        if square_file:
-            # Read Square file with headers on row 2 (index=1)
-            square_df = pd.read_excel(square_file, header=1)
+        if square_file_cv and square_file_pv:
+            # Read Square files with headers on row 2 (index=1)
+            square_cv = pd.read_excel(square_file_cv, header=1)
+            square_pv = pd.read_excel(square_file_pv, header=1)
 
             # --- Canapé-Vert comparison ---
             st.subheader("🔍 Inconsistencies - Canapé-Vert")
@@ -33,7 +39,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                 (master_df["Location"] == "Canapé-Vert")
             ]
             merged_cv = wigs_master_cv.merge(
-                square_df[["Item Name", "Current Quantity Dressup Haiti"]],
+                square_cv[["Item Name", "Current Quantity Dressup Haiti"]],
                 left_on="Full Name",
                 right_on="Item Name",
                 how="inner"
@@ -48,7 +54,7 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                 (master_df["Location"] == "PV")
             ]
             merged_pv = wigs_master_pv.merge(
-                square_df[["Item Name", "Current Quantity Dressupht Pv"]],
+                square_pv[["Item Name", "Current Quantity Dressupht Pv"]],
                 left_on="Full Name",
                 right_on="Item Name",
                 how="inner"
@@ -56,4 +62,4 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             inconsistent_pv = merged_pv[merged_pv["Stock"] != merged_pv["Current Quantity Dressupht Pv"]]
             st.dataframe(inconsistent_pv[["Full Name", "Stock", "Current Quantity Dressupht Pv"]])
         else:
-            st.info("Upload the Square Excel file to run comparison.")
+            st.info("Upload both Square Excel files to run comparison.")

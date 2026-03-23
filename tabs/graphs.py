@@ -63,32 +63,40 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             else:
                 st.info("No sync log data available.")
 
-        # --- 3. Top 10 Best-Selling Items ---
+        # --- 3. Top 10 Best-Selling Items by Location ---
         with subtabs[2]:
-            st.subheader("Top 10 Best-Selling Items")
-
+            st.subheader("Top 10 Best-Selling Items by Location")
+        
             sales_response = supabase.table("Sales").select("*").execute()
             if sales_response.data:
                 sales_df = pd.DataFrame(sales_response.data)
-
-                if "product_name" in sales_df.columns and "quantity" in sales_df.columns:
-                    top_items = (
-                        sales_df.groupby("product_name")["quantity"]
+        
+                if {"product_name", "quantity", "Location"} <= set(sales_df.columns):
+                    # Group by product and location
+                    grouped = (
+                        sales_df.groupby(["Location", "product_name"])["quantity"]
                         .sum()
                         .reset_index()
-                        .sort_values("quantity", ascending=False)
-                        .head(10)
                     )
-
-                    chart = alt.Chart(top_items).mark_bar().encode(
-                        x="quantity:Q",
-                        y=alt.Y("product_name:N", sort="-x"),
-                        tooltip=["product_name", "quantity"]
-                    ).properties(width=600, height=400)
-
-                    st.altair_chart(chart, width='stretch')
+        
+                    # Separate top 10 for each location
+                    for loc in ["Canapé-Vert", "PV"]:
+                        st.markdown(f"**{loc}**")
+                        top_items = (
+                            grouped[grouped["Location"] == loc]
+                            .sort_values("quantity", ascending=False)
+                            .head(10)
+                        )
+        
+                        chart = alt.Chart(top_items).mark_bar().encode(
+                            x="quantity:Q",
+                            y=alt.Y("product_name:N", sort="-x"),
+                            tooltip=["product_name", "quantity"]
+                        ).properties(width=600, height=400)
+        
+                        st.altair_chart(chart, use_container_width=True)
                 else:
-                    st.info("product_name/quantity columns not found in Sales data.")
+                    st.info("product_name/quantity/Location columns not found in Sales data.")
             else:
                 st.info("No sales data available.")
 

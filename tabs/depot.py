@@ -28,8 +28,18 @@ def render_tab(container, supabase, username, role, loc_list, t):
         if not d_df.empty and view_loc:
             if view_loc != "All":
                 d_df = d_df[d_df['location'] == view_loc]
-            st.dataframe(d_df[['Date','Wig Name','Type','Quantity','User','location']],
-                         width='stretch', hide_index=True)
+
+            # Compute running balance per SKU/location
+            d_df = d_df.sort_values("Date")
+            d_df["Balance"] = d_df.apply(
+                lambda row: row["Quantity"] if row["Type"] == "Addition" else -row["Quantity"], axis=1
+            )
+            d_df["Running Balance"] = d_df.groupby(["SKU","location"])["Balance"].cumsum()
+
+            st.dataframe(
+                d_df[['Date','Wig Name','Type','Quantity','User','location','Running Balance']],
+                width='stretch', hide_index=True
+            )
         else:
             st.info("No activity recorded in the Depot yet.")
 
@@ -60,6 +70,17 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     d_item = match[match['SKU'] == selected_sku].iloc[0]
                     st.success(f"Selected: **{d_item['Full Name']}** ({d_item['SKU']})")
 
+                    # Show current depot stock for this SKU/location
+                    stock_query = supabase.table("Depot").select("*").eq("SKU", d_item['SKU']).eq("location", d_loc).execute()
+                    stock_df = pd.DataFrame(stock_query.data) if stock_query.data else pd.DataFrame()
+                    if not stock_df.empty:
+                        current_stock = stock_df.apply(
+                            lambda row: row["Quantity"] if row["Type"] == "Addition" else -row["Quantity"], axis=1
+                        ).sum()
+                    else:
+                        current_stock = 0
+                    st.info(f"📦 Current depot stock for {d_item['Full Name']} at {d_loc}: {current_stock}")
+
                     with st.form("depot_form", clear_on_submit=True):
                         d_type = st.radio("Movement Type", ["Addition","Withdrawal"], horizontal=True)
                         d_qty = st.number_input("Quantity", min_value=1, step=1)
@@ -76,7 +97,14 @@ def render_tab(container, supabase, username, role, loc_list, t):
                                 "location": d_loc
                             }
                             supabase.table("Depot").insert(dep_entry).execute()
-                            st.success(f"Recorded {d_type} for {d_item['Full Name']} at {d_loc}")
+
+                            # Adjust current stock for display
+                            new_stock = current_stock + (d_qty if d_type == "Addition" else -d_qty)
+
+                            st.success(
+                                f"{d_type} of {d_qty} wigs recorded for {d_item['Full Name']} at {d_loc}. "
+                                f"New depot stock: {new_stock}"
+                            )
                             time.sleep(1); st.rerun()
                 else:
                     st.error("Item not found in inventory.")

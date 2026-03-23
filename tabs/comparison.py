@@ -15,41 +15,45 @@ def render_tab(tab, supabase, username, role, loc_list, t):
 
         # --- Uploaders for Square files ---
         st.subheader("Upload Square Excel files")
-        square_file_cv = st.file_uploader(
-            "Square Export - Canapé-Vert",
+        square_file = st.file_uploader(
+            "Square Export (Excel)",
             type=["xlsx"],
-            key="comparison_square_cv"
-        )
-        square_file_pv = st.file_uploader(
-            "Square Export - PV",
-            type=["xlsx"],
-            key="comparison_square_pv"
+            key="comparison_square_file"
         )
 
         # --- Comparison Logic ---
-        if square_file_cv and square_file_pv:
-            # Read Square files with headers on row 2 (index=1)
-            square_cv = pd.read_excel(square_file_cv, header=1)
-            square_pv = pd.read_excel(square_file_pv, header=1)
+        if square_file:
+            # Read Square file with headers on row 2 (index=1)
+            square_df = pd.read_excel(square_file, header=1)
 
-            # Filter wigs only
-            wigs_master = master_df[master_df["Category"].str.contains("wig", case=False, na=False)]
-            wigs_cv = square_cv[square_cv["Categories"].str.contains("wig", case=False, na=False)]
-            wigs_pv = square_pv[square_pv["Categories"].str.contains("wig", case=False, na=False)]
-
-            # Compare stock per location
+            # --- Canapé-Vert comparison ---
             st.subheader("🔍 Inconsistencies - Canapé-Vert")
-            merged_cv = wigs_master[wigs_master["Location"] == "Canapé-Vert"].merge(
-                wigs_cv, on="SKU", suffixes=("_master", "_square"), how="inner"
+            wigs_master_cv = master_df[
+                (master_df["Category"].str.contains("wig", case=False, na=False)) &
+                (master_df["Location"] == "Canapé-Vert")
+            ]
+            merged_cv = wigs_master_cv.merge(
+                square_df[["Item Name", "Current Quantity Dressup Haiti"]],
+                left_on="Full Name",
+                right_on="Item Name",
+                how="inner"
             )
-            inconsistent_cv = merged_cv[merged_cv["Stock_master"] != merged_cv["Stock_square"]]
-            st.dataframe(inconsistent_cv[["SKU", "Full Name", "Stock_master", "Stock_square"]])
+            inconsistent_cv = merged_cv[merged_cv["Stock"] != merged_cv["Current Quantity Dressup Haiti"]]
+            st.dataframe(inconsistent_cv[["Full Name", "Stock", "Current Quantity Dressup Haiti"]])
 
+            # --- PV comparison ---
             st.subheader("🔍 Inconsistencies - PV")
-            merged_pv = wigs_master[wigs_master["Location"] == "PV"].merge(
-                wigs_pv, on="SKU", suffixes=("_master", "_square"), how="inner"
+            wigs_master_pv = master_df[
+                (master_df["Category"].str.contains("wig", case=False, na=False)) &
+                (master_df["Location"] == "PV")
+            ]
+            merged_pv = wigs_master_pv.merge(
+                square_df[["Item Name", "Current Quantity Dressupht Pv"]],
+                left_on="Full Name",
+                right_on="Item Name",
+                how="inner"
             )
-            inconsistent_pv = merged_pv[merged_pv["Stock_master"] != merged_pv["Stock_square"]]
-            st.dataframe(inconsistent_pv[["SKU", "Full Name", "Stock_master", "Stock_square"]])
+            inconsistent_pv = merged_pv[merged_pv["Stock"] != merged_pv["Current Quantity Dressupht Pv"]]
+            st.dataframe(inconsistent_pv[["Full Name", "Stock", "Current Quantity Dressupht Pv"]])
         else:
-            st.info("Upload both Square Excel files to run comparison.")
+            st.info("Upload the Square Excel file to run comparison.")

@@ -42,24 +42,24 @@ def render_tab(tab, supabase, username, role, loc_list, t):
         with subtabs[1]:
             st.subheader("Inventory Trend Over Time")
 
-            # Ensure we have a date column
-            if "updated_at" in df.columns and "Stock" in df.columns:
-                # Convert to datetime
-                df["updated_at"] = pd.to_datetime(df["updated_at"], errors="coerce")
+            # Fetch sync log data
+            sync_response = supabase.table("sync_log").select("synced_at, location, type").order("synced_at").execute()
+            if sync_response.data:
+                sync_df = pd.DataFrame(sync_response.data)
+                sync_df["synced_at"] = pd.to_datetime(sync_df["synced_at"], errors="coerce")
 
-                # Group by date (day-level granularity)
-                trend = df.groupby(df["updated_at"].dt.date)["Stock"].sum().reset_index()
-                trend.rename(columns={"updated_at": "Date"}, inplace=True)
+                # Count syncs per day as a proxy for trend
+                trend = sync_df.groupby(sync_df["synced_at"].dt.date).size().reset_index(name="Sync Events")
 
                 chart = alt.Chart(trend).mark_line(point=True).encode(
-                    x="Date:T",
-                    y="Stock:Q",
-                    tooltip=["Date", "Stock"]
+                    x="synced_at:T",
+                    y="Sync Events:Q",
+                    tooltip=["synced_at", "Sync Events"]
                 ).properties(width=600, height=400)
 
                 st.altair_chart(chart, use_container_width=True)
             else:
-                st.info("No 'updated_at' or 'Stock' column found in data.")
+                st.info("No sync log data available.")
 
         # --- 3. Top 10 Best-Sellers (placeholder) ---
         with subtabs[2]:

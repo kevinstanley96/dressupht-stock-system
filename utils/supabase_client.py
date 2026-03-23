@@ -4,19 +4,17 @@ import os
 
 @st.cache_resource
 def init_connection() -> Client:
-    """
-    Initialize and return a Supabase client.
-    Reads credentials from Streamlit secrets or environment variables.
-    Cached so the client is reused across reruns.
-    """
     try:
-        # Prefer Streamlit secrets
-        url = st.secrets["SUPABASE_URL"]
-        key = st.secrets["SUPABASE_KEY"]
-    except Exception:
-        # Fallback to environment variables
+        url = st.secrets.get("SUPABASE_URL", None)
+        key = st.secrets.get("SUPABASE_KEY", None)
+        st.write("🔍 Debug: URL from secrets =", url)
+        st.write("🔍 Debug: Key present =", bool(key))
+    except Exception as e:
+        st.write("⚠️ Debug: Could not read st.secrets:", e)
         url = os.getenv("SUPABASE_URL")
         key = os.getenv("SUPABASE_KEY")
+        st.write("🔍 Debug: URL from env =", url)
+        st.write("🔍 Debug: Key present =", bool(key))
 
     if not url or not key:
         st.error("❌ Supabase credentials not found. Please set SUPABASE_URL and SUPABASE_KEY.")

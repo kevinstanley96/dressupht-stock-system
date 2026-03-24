@@ -9,6 +9,7 @@ import os
 from square import Square
 from square.environment import SquareEnvironment
 import pytz
+import bcrypt
 
 # Import the global supabase client
 from utils.supabase_client import supabase
@@ -29,6 +30,20 @@ square_client = Square(
     environment=SquareEnvironment.PRODUCTION   # or SquareEnvironment.SANDBOX
 )
 
+def hash_password(password: str) -> str:
+    """
+    Hash a plaintext password using bcrypt.
+    """
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+def verify_password(password: str, hashed: str) -> bool:
+    """
+    Verify a plaintext password against a bcrypt hash.
+    """
+    return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+
 # --- LOGIN ---
 def login_user(supabase):
     if "authenticated" not in st.session_state:
@@ -48,9 +63,9 @@ def login_user(supabase):
                 return None
 
             user = result.data[0]
-            stored_pw = user.get("password")
+            stored_hash = user.get("password_hash")
 
-            if stored_pw and password_input == stored_pw:
+            if stored_hash and verify_password(password_input, stored_hash):
                 st.success(f"Welcome {user['user_name']}!")
                 st.session_state.authenticated = True
                 st.session_state.username = user["user_name"]

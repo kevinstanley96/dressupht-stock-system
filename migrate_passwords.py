@@ -1,9 +1,10 @@
+import os
 import bcrypt
 from supabase import create_client
 
 # Initialize Supabase client (adjust with your project URL and key)
-url = "https://oljbgojimlftphixoumy.supabase.co"
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9samJnb2ppbWxmdHBoaXhvdW15Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjMwMDEwNiwiZXhwIjoyMDg3ODc2MTA2fQ.GkwppwlyNbnwWoplOD0zCEnG1XiCzLAcI9DkoN9orgY"  # use service role key for admin operations
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 supabase = create_client(url, key)
 
 def hash_password(password: str) -> str:

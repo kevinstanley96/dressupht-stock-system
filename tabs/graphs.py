@@ -70,17 +70,16 @@ def render_tab(tab, supabase, username, role, loc_list, t):
             sales_response = supabase.table("Sales").select("*").execute()
             if sales_response.data:
                 sales_df = pd.DataFrame(sales_response.data)
+                sales_df.columns = sales_df.columns.str.lower()  # normalize
         
                 if {"product_name", "quantity", "location"} <= set(sales_df.columns):
-                    # Group by product and location
                     grouped = (
                         sales_df.groupby(["location", "product_name"])["quantity"]
                         .sum()
                         .reset_index()
                     )
         
-                    # Separate top 10 for each location
-                    for loc in ["Canapé-Vert", "PV"]:
+                    for loc in grouped["location"].unique():
                         st.markdown(f"**{loc}**")
                         top_items = (
                             grouped[grouped["location"] == loc]
@@ -88,15 +87,23 @@ def render_tab(tab, supabase, username, role, loc_list, t):
                             .head(10)
                         )
         
-                        chart = alt.Chart(top_items).mark_bar().encode(
-                            x="quantity:Q",
-                            y=alt.Y("product_name:N", sort="-x"),
-                            tooltip=["product_name", "quantity"]
-                        ).properties(width=600, height=400)
-        
-                        st.altair_chart(chart, use_container_width=True)
+                        if top_items.empty:
+                            st.info(f"No sales data for {loc}.")
+                        else:
+                            chart = (
+                                alt.Chart(top_items)
+                                .mark_bar()
+                                .encode(
+                                    x=alt.X("quantity:Q", title="Units Sold"),
+                                    y=alt.Y("product_name:N", sort="-x", title="Product"),
+                                    color=alt.Color("quantity:Q", scale=alt.Scale(scheme="blues")),
+                                    tooltip=["product_name", "quantity"]
+                                )
+                                .properties(width=600, height=400)
+                            )
+                            st.altair_chart(chart, use_container_width=True)
                 else:
-                    st.info("product_name/quantity/Location columns not found in Sales data.")
+                    st.info("Required columns (product_name, quantity, location) not found in Sales data.")
             else:
                 st.info("No sales data available.")
 

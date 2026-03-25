@@ -60,7 +60,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         "Total_Physical": row['Total_Physical'],
                         "Discrepancy": row['Total_Physical'] - row['Stock'],
                         "Counter_Name": username,
-                        "Location": sel_loc
+                        "location": sel_loc
                     }
                     supabase.table("Inventory").insert(audit_entry).execute()
                 st.success("Audit saved successfully!")
@@ -90,15 +90,16 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         # Rename columns for Excel export only
                         export_df = cat_df.rename(columns={
                             "Name": "Nom",
+                            "Category": "Category",
+                            "Counter_Name": "Employé",
                             "Total_Physical": "Total Physique",
                             "System_Stock": "Système",
                             "Discrepancy": "Différence",
-                            "Counter_Name": "Employé",
                             "location": "Local"
                         })
 
                         safe_name = sanitize_sheet_name(cat)
-                        export_df.to_excel(writer, sheet_name=safe_name, index=False)
+                        export_df.to_excel(writer, sheet_name=safe_name, index=False, startrow=3)
 
                         summary_rows.append({
                             "Catégorie": cat,
@@ -110,7 +111,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
 
                         st.markdown(f"### 📂 {cat}")
                         st.dataframe(
-                            export_df[['Nom','Total Physique','Système','Différence','Employé','Local']],
+                            export_df[['Nom','Category','Employé','Total Physique','Système','Différence','Local']],
                             width='stretch',
                             hide_index=True,
                             key=f"audit_log_{cat}"
@@ -119,18 +120,30 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     summary_df = pd.DataFrame(summary_rows)
                     summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
-                # Add merged date row at top of each sheet
+                # Add merged header rows + footer
                 output.seek(0)
                 wb = load_workbook(output)
                 for sheet_name in wb.sheetnames:
                     if sheet_name != "Summary":
                         ws = wb[sheet_name]
-                        ws.insert_rows(1)
                         max_col = ws.max_column
+
+                        # Title, Date, Category rows
                         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
-                        cell = ws.cell(row=1, column=1)
-                        cell.value = datetime.now().strftime("%d-%m-%Y")
-                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
+                        ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
+
+                        ws.cell(row=1, column=1).value = "200% GLUELESS 69 wig"
+                        ws.cell(row=2, column=1).value = datetime.now().strftime("%d-%m-%Y")
+                        ws.cell(row=3, column=1).value = sheet_name
+
+                        for r in [1,2,3]:
+                            ws.cell(row=r, column=1).alignment = Alignment(horizontal="center", vertical="center")
+
+                        # Footer rows
+                        footer_row = ws.max_row + 2
+                        ws.cell(row=footer_row, column=1).value = "EXPLICATIONS:"
+                        ws.cell(row=footer_row+1, column=1).value = "DRESSUP HAITI - INVENTAIRE PÉTION-VILLE"
 
                 final_output = io.BytesIO()
                 wb.save(final_output)

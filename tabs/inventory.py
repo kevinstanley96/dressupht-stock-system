@@ -88,7 +88,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         cat_df = df_log[df_log['Category'] == cat].copy()
 
                         # Rename columns for Excel export only
-                        cat_df = cat_df.rename(columns={
+                        export_df = cat_df.rename(columns={
                             "Name": "Nom",
                             "Total_Physical": "Total Physique",
                             "System_Stock": "Système",
@@ -98,19 +98,19 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         })
 
                         safe_name = sanitize_sheet_name(cat)
-                        cat_df.to_excel(writer, sheet_name=safe_name, index=False)
+                        export_df.to_excel(writer, sheet_name=safe_name, index=False)
 
                         summary_rows.append({
                             "Catégorie": cat,
                             "Sheet Name": safe_name,
-                            "Total Compté": cat_df["Total Physique"].sum(),
-                            "Total System": cat_df["Système"].sum(),
-                            "Total Différence": cat_df["Différence"].sum()
+                            "Total Compté": export_df["Total Physique"].sum(),
+                            "Total System": export_df["Système"].sum(),
+                            "Total Différence": export_df["Différence"].sum()
                         })
 
                         st.markdown(f"### 📂 {cat}")
                         st.dataframe(
-                            cat_df[['Nom','Total Physique','Système','Différence','Employé','Local']],
+                            export_df[['Nom','Total Physique','Système','Différence','Employé','Local']],
                             width='stretch',
                             hide_index=True,
                             key=f"audit_log_{cat}"

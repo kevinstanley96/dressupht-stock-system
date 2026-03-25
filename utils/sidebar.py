@@ -92,11 +92,31 @@ def render_sidebar(username, role, loc_list, supabase):
                 st.error(f"❌ Error during overwrite & sync: {e}")
 
         # --- SYNC BUTTONS (Admin/Manager only) ---
-        st.header("🔄 Inventory Sync")
-        if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
-            sync_inventory("Dressupht Pv")
-        if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
-            sync_inventory("Canape-Vert")
+        if role in ["Admin", "Manager"]:
+            st.header("🔄 Inventory Sync")
+    
+            # Manual buttons (still available anytime)
+            if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
+                sync_inventory("Dressupht Pv")
+            if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
+                sync_inventory("Canape-Vert")
+    
+            # --- AUTO SYNC EVERY 30 MINUTES ---
+            count = st.experimental_autorefresh(interval=1800 * 1000, limit=None, key="auto_sync")
+    
+            if count > 0:
+                # Run both syncs automatically
+                sync_inventory("Dressupht Pv")
+                sync_inventory("Canape-Vert")
+    
+                # Log auto-sync event
+                now_ht = datetime.now(haiti_tz).isoformat()
+                supabase.table("sync_log").insert([
+                    {"location": "Dressupht Pv", "synced_at": now_ht, "type": "AUTO"},
+                    {"location": "Canape-Vert", "synced_at": now_ht, "type": "AUTO"}
+                ]).execute()
+    
+                st.info("✅ Auto-sync triggered (every 30 minutes)")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):

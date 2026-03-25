@@ -103,7 +103,7 @@ def render_sidebar(username, role, loc_list, supabase):
                 sync_inventory("Canape-Vert")
     
             # --- AUTO SYNC EVERY 30 MINUTES ---
-            count = st_autorefresh(interval=1800 * 1000, limit=None, key="auto_sync")
+            count = st.experimental_autorefresh(interval=1800 * 1000, limit=None, key="auto_sync")
     
             if count > 0:
                 sync_inventory("Dressupht Pv")

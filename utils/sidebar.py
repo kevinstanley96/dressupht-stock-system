@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from utils.helpers import clean_and_combine, sync_inventory
 
@@ -103,11 +103,16 @@ def render_sidebar(username, role, loc_list, supabase):
                 sync_inventory("Canape-Vert")
                 st.session_state["last_auto_sync"] = datetime.now(haiti_tz)
     
-            # --- AUTO SYNC EVERY 30 MINUTES ---
+            # Ensure session state key exists
+            if "last_auto_sync" not in st.session_state:
+                st.session_state["last_auto_sync"] = None
+    
+            # --- AUTO SYNC EVERY 30 MINUTES (checks on each rerun) ---
             now_ht = datetime.now(haiti_tz)
             last_sync = st.session_state.get("last_auto_sync")
     
             if not last_sync or (now_ht - last_sync) >= timedelta(minutes=30):
+                # Run both syncs automatically
                 sync_inventory("Dressupht Pv")
                 sync_inventory("Canape-Vert")
     

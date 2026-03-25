@@ -98,23 +98,26 @@ def render_sidebar(username, role, loc_list, supabase):
             # Manual buttons (still available anytime)
             if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
                 sync_inventory("Dressupht Pv")
+                st.session_state["last_auto_sync"] = datetime.now(haiti_tz)
             if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
                 sync_inventory("Canape-Vert")
+                st.session_state["last_auto_sync"] = datetime.now(haiti_tz)
     
             # --- AUTO SYNC EVERY 30 MINUTES ---
-            count = st.experimental_autorefresh(interval=1800 * 1000, limit=None, key="auto_sync")
+            now_ht = datetime.now(haiti_tz)
+            last_sync = st.session_state.get("last_auto_sync")
     
-            if count > 0:
+            if not last_sync or (now_ht - last_sync) >= timedelta(minutes=30):
                 sync_inventory("Dressupht Pv")
                 sync_inventory("Canape-Vert")
     
                 # Log auto-sync event
-                now_ht = datetime.now(haiti_tz).isoformat()
                 supabase.table("sync_log").insert([
-                    {"location": "Dressupht Pv", "synced_at": now_ht, "type": "AUTO"},
-                    {"location": "Canape-Vert", "synced_at": now_ht, "type": "AUTO"}
+                    {"location": "Dressupht Pv", "synced_at": now_ht.isoformat(), "type": "AUTO"},
+                    {"location": "Canape-Vert", "synced_at": now_ht.isoformat(), "type": "AUTO"}
                 ]).execute()
     
+                st.session_state["last_auto_sync"] = now_ht
                 st.info("✅ Auto-sync triggered (every 30 minutes)")
 
     # --- LOGOUT (always last) ---

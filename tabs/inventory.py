@@ -89,7 +89,16 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     for cat in sorted(df_log['Category'].unique()):
                         cat_df = df_log[df_log['Category'] == cat].copy()
                 
-                        export_df = cat_df.rename(columns={
+                        # Keep only the needed columns
+                        export_df = cat_df[[
+                            "Name",
+                            "Category",
+                            "Counter_Name",
+                            "Total_Physical",
+                            "System_Stock",
+                            "Discrepancy",
+                            "location"
+                        ]].rename(columns={
                             "Name": "Nom",
                             "Category": "Category",
                             "Counter_Name": "Employé",

@@ -82,12 +82,13 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 elif role in ["Admin","Manager"] and sel_loc != "All Locations":
                     df_log = df_log[df_log['location'] == sel_loc]
 
-                output, summary_rows = io.BytesIO(), []
+                output = io.BytesIO()
+                summary_rows = []
+                
                 with pd.ExcelWriter(output, engine="openpyxl") as writer:
                     for cat in sorted(df_log['Category'].unique()):
                         cat_df = df_log[df_log['Category'] == cat].copy()
-
-                        # Rename columns for Excel export only
+                
                         export_df = cat_df.rename(columns={
                             "Name": "Nom",
                             "Category": "Category",
@@ -97,10 +98,12 @@ def render_tab(container, supabase, username, role, loc_list, t):
                             "Discrepancy": "Différence",
                             "location": "Local"
                         })
-
+                
                         safe_name = sanitize_sheet_name(cat)
+                
+                        # Leave space for header (we start writing at row 4)
                         export_df.to_excel(writer, sheet_name=safe_name, index=False, startrow=3)
-
+                
                         summary_rows.append({
                             "Catégorie": cat,
                             "Sheet Name": safe_name,
@@ -108,49 +111,87 @@ def render_tab(container, supabase, username, role, loc_list, t):
                             "Total System": export_df["Système"].sum(),
                             "Total Différence": export_df["Différence"].sum()
                         })
-
-                        st.markdown(f"### 📂 {cat}")
-                        st.dataframe(
-                            export_df[['Nom','Category','Employé','Total Physique','Système','Différence','Local']],
-                            width='stretch',
-                            hide_index=True,
-                            key=f"audit_log_{cat}"
-                        )
-
-                    summary_df = pd.DataFrame(summary_rows)
-                    summary_df.to_excel(writer, sheet_name="Summary", index=False)
-
-                # Add merged header rows + footer
+                
+                summary_df = pd.DataFrame(summary_rows)
+                summary_df.to_excel(writer, sheet_name="Summary", index=False)
+                
+                # ---------------- POST STYLING ----------------
                 output.seek(0)
                 wb = load_workbook(output)
+                
+                from openpyxl.styles import Alignment, Font, Border, Side
+                
+                thin_border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+                
                 for sheet_name in wb.sheetnames:
-                    if sheet_name != "Summary":
-                        ws = wb[sheet_name]
-                        max_col = ws.max_column
-
-                        # Title, Date, Category rows
-                        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
-                        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
-                        ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
-
-                        ws.cell(row=1, column=1).value = "200% GLUELESS 69 wig"
-                        ws.cell(row=2, column=1).value = datetime.now().strftime("%d-%m-%Y")
-                        ws.cell(row=3, column=1).value = sheet_name
-
-                        for r in [1,2,3]:
-                            ws.cell(row=r, column=1).alignment = Alignment(horizontal="center", vertical="center")
-
-                        # Footer rows
-                        footer_row = ws.max_row + 2
-                        ws.cell(row=footer_row, column=1).value = "EXPLICATIONS:"
-                        ws.cell(row=footer_row+1, column=1).value = "DRESSUP HAITI - INVENTAIRE PÉTION-VILLE"
-
+                    if sheet_name == "Summary":
+                        continue
+                
+                    ws = wb[sheet_name]
+                    max_col = ws.max_column
+                    max_row = ws.max_row
+                
+                    # === 1. DATE HEADER ===
+                    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
+                    cell = ws.cell(row=1, column=1)
+                    cell.value = datetime.now().strftime("%d-%m-%Y")
+                    cell.font = Font(size=16, bold=True)
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                
+                    ws.row_dimensions[1].height = 25
+                
+                    # === 2. COLUMN HEADERS STYLE ===
+                    for col in range(1, max_col + 1):
+                        cell = ws.cell(row=4, column=col)
+                        cell.font = Font(bold=True)
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                        cell.border = thin_border
+                
+                    # === 3. DATA CELLS STYLE ===
+                    for row in range(5, max_row + 1):
+                        for col in range(1, max_col + 1):
+                            cell = ws.cell(row=row, column=col)
+                            cell.alignment = Alignment(horizontal="center", vertical="center")
+                            cell.border = thin_border
+                
+                    # === 4. LEFT VERTICAL CATEGORY LABEL ===
+                    start_row = 4
+                    end_row = max_row
+                
+                    ws.merge_cells(start_row=start_row, start_column=1, end_row=end_row, end_column=1)
+                    vcell = ws.cell(row=start_row, column=1)
+                
+                    vcell.value = sheet_name.upper()
+                    vcell.alignment = Alignment(textRotation=90, horizontal="center", vertical="center")
+                    vcell.font = Font(bold=True)
+                
+                    # Shift table right (since col 1 is used)
+                    for row in range(4, max_row + 1):
+                        for col in reversed(range(2, max_col + 2)):
+                            ws.cell(row=row, column=col).value = ws.cell(row=row, column=col - 1).value
+                
+                    # Clear duplicated col 1 (except vertical label)
+                    for row in range(5, max_row + 1):
+                        ws.cell(row=row, column=1).value = None
+                
+                    # === 5. FOOTER ===
+                    footer_row = max_row + 2
+                
+                    ws.cell(row=footer_row, column=1).value = "EXPLICATIONS:"
+                    ws.cell(row=footer_row + 2, column=1).value = "DRESSUP HAITI - INVENTAIRE PÉTION-VILLE"
+                
+                # Save final file
                 final_output = io.BytesIO()
                 wb.save(final_output)
                 final_output.seek(0)
-
+                
                 st.download_button(
-                    "⬇️ Download Full Audit History (Excel with Sheets + Summary)",
+                    "⬇️ Download Full Audit History (Styled Excel Report)",
                     data=final_output.getvalue(),
                     file_name="audit_history_by_category.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

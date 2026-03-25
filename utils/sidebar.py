@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import pytz
+from streamlit_autorefresh import st_autorefresh 
 from utils.helpers import clean_and_combine, sync_inventory
 
 haiti_tz = pytz.timezone("America/Port-au-Prince")

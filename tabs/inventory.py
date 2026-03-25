@@ -78,9 +78,9 @@ def render_tab(container, supabase, username, role, loc_list, t):
 
                 # Filter by location
                 if role == "Staff":
-                    df_log = df_log[df_log['Location'].isin(loc_list)]
+                    df_log = df_log[df_log['location'].isin(loc_list)]
                 elif role in ["Admin","Manager"] and sel_loc != "All Locations":
-                    df_log = df_log[df_log['Location'] == sel_loc]
+                    df_log = df_log[df_log['location'] == sel_loc]
 
                 output, summary_rows = io.BytesIO(), []
                 with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -94,7 +94,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                             "System_Stock": "Système",
                             "Discrepancy": "Différence",
                             "Counter_Name": "Employé",
-                            "Location": "Local"
+                            "location": "Local"
                         })
 
                         safe_name = sanitize_sheet_name(cat)

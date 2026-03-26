@@ -55,6 +55,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
 
                             if st.form_submit_button(t["confirm"]):
                                 try:
+                                    # 1. Log arrival
                                     arrival_data = {
                                         "date": datetime.combine(arr_date, datetime.now().time()).isoformat(),
                                         "sku": t_item['SKU'],
@@ -65,6 +66,60 @@ def render_tab(container, supabase, username, role, loc_list, t):
                                         "location": arr_loc
                                     }
                                     supabase.table("Arrival").insert(arrival_data).execute()
+
+                                    # 2. Update Master_Inventory
+                                    if arr_loc == "Canape-Vert":
+                                        # Add stock to Canape-Vert only
+                                        cv_query = supabase.table("Master_Inventory").select("*")\
+                                            .eq("SKU", t_item["SKU"]).eq("Location", "Canape-Vert").execute()
+                                        cv_data = cv_query.data
+                                        if cv_data:
+                                            current_stock = cv_data[0]["Stock"]
+                                            supabase.table("Master_Inventory").update({
+                                                "Stock": current_stock + arr_qty
+                                            }).eq("SKU", t_item["SKU"]).eq("Location", "Canape-Vert").execute()
+                                        else:
+                                            new_entry = {
+                                                "SKU": t_item["SKU"],
+                                                "Full Name": t_item["Full Name"],
+                                                "Category": t_item["Category"],
+                                                "Location": "Canape-Vert",
+                                                "Stock": arr_qty,
+                                                "Price": t_item["Price"]
+                                            }
+                                            supabase.table("Master_Inventory").insert(new_entry).execute()
+
+                                    elif arr_loc == "Pv":
+                                        # Deduct from Canape-Vert, add to PV
+                                        cv_query = supabase.table("Master_Inventory").select("*")\
+                                            .eq("SKU", t_item["SKU"]).eq("Location", "Canape-Vert").execute()
+                                        cv_data = cv_query.data
+                                        if cv_data:
+                                            current_stock = cv_data[0]["Stock"]
+                                            supabase.table("Master_Inventory").update({
+                                                "Stock": current_stock - arr_qty
+                                            }).eq("SKU", t_item["SKU"]).eq("Location", "Canape-Vert").execute()
+
+                                        pv_query = supabase.table("Master_Inventory").select("*")\
+                                            .eq("SKU", t_item["SKU"]).eq("Location", "Pv").execute()
+                                        pv_data = pv_query.data
+                                        if pv_data:
+                                            current_stock = pv_data[0]["Stock"]
+                                            supabase.table("Master_Inventory").update({
+                                                "Stock": current_stock + arr_qty
+                                            }).eq("SKU", t_item["SKU"]).eq("Location", "Pv").execute()
+                                        else:
+                                            new_entry = {
+                                                "SKU": t_item["SKU"],
+                                                "Full Name": t_item["Full Name"],
+                                                "Category": t_item["Category"],
+                                                "Location": "Pv",
+                                                "Stock": arr_qty,
+                                                "Price": t_item["Price"]
+                                            }
+                                            supabase.table("Master_Inventory").insert(new_entry).execute()
+
+                                    # 3. Success message
                                     st.success(t["success"].format(qty=arr_qty, name=t_item['Full Name']))
                                     st.session_state.arrival_date = arr_date
                                     st.session_state.arrival_verify = {"name": None, "cat": None, "sku": ""}

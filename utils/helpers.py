@@ -42,18 +42,18 @@ square_client = Square(
 # --- LOGIN ---
 def login_user(supabase):
     # --- Check cookie first ---
-    if cookies.get("authenticated") == "true":
+    username_cookie = cookies.get("username")
+    if username_cookie:
         st.session_state.authenticated = True
-        st.session_state.username = cookies.get("username")
-        st.session_state.role = cookies.get("role")
-        st.session_state.location = cookies.get("location")
+        st.session_state.username = username_cookie
+        st.session_state.role = cookies.get(f"role_{username_cookie}")
+        st.session_state.location = cookies.get(f"location_{username_cookie}")
 
         # Show logout button
         if st.button("Logout"):
-            cookies["authenticated"] = "false"
+            cookies[f"role_{username_cookie}"] = ""
+            cookies[f"location_{username_cookie}"] = ""
             cookies["username"] = ""
-            cookies["role"] = ""
-            cookies["location"] = ""
             cookies.save()
 
             st.session_state.authenticated = False
@@ -98,11 +98,10 @@ def login_user(supabase):
                 st.session_state.role = user["role"]
                 st.session_state.location = user["location"]
 
-                # Persist in cookies
-                cookies["authenticated"] = "true"
+                # Persist in cookies (scoped by username)
                 cookies["username"] = user["user_name"]
-                cookies["role"] = user["role"]
-                cookies["location"] = user["location"]
+                cookies[f"role_{user['user_name']}"] = user["role"]
+                cookies[f"location_{user['user_name']}"] = user["location"]
                 cookies.save()
 
                 st.rerun()

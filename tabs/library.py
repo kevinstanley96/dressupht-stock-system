@@ -24,13 +24,19 @@ def render_tab(container, supabase, username, role, loc_list, t):
             c1, c2, c3, c4, c5, c6 = st.columns([2, 1, 1, 1, 1, 1])
             search_query = c1.text_input("🔍 Search", placeholder="Search by name, SKU, token...")
 
-            # Location filter
-            if role != "Staff":
-                sel_loc = c2.selectbox("Location", ["All Locations"] + sorted(master_inventory['Location'].unique()))
-                if sel_loc != "All Locations":
-                    disp_df = disp_df[disp_df['Location'] == sel_loc]
+            # --- Location filter (shown to everyone) ---
+            if role == "Staff":
+                # Staff: only their allowed locations
+                loc_options = loc_list if loc_list else []
             else:
-                c2.write(f"📍 Location(s): {', '.join(loc_list) if loc_list else 'None'}")
+                # Non-staff: all locations
+                loc_options = sorted(master_inventory['Location'].unique())
+            
+            # Always prepend "All Locations"
+            sel_loc = c2.selectbox("Location", ["All Locations"] + loc_options)
+            
+            if sel_loc != "All Locations":
+                disp_df = disp_df[disp_df['Location'] == sel_loc]
 
             # Category filter
             sel_cat = c3.selectbox("Category", ["All Categories"] + sorted(master_inventory['Category'].unique()))

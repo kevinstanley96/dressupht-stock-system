@@ -9,7 +9,7 @@ import os
 from square import Square
 from square.environment import SquareEnvironment
 import pytz
-from streamlit_cookies_manager import EncryptedCookieManager
+from streamlit_cookies_controller import CookieController
 
 # Import the global supabase client
 from utils.supabase_client import supabase
@@ -20,8 +20,8 @@ from utils.square_client import square_client
 # --- Timezone ---
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 
-# --- Setup cookie manager ---
-cookies = EncryptedCookieManager(
+# --- Setup cookie controller ---
+cookies = CookieController(
     prefix="myapp/",
     password="a-very-secret-password"  # change this to something secure
 )
@@ -84,11 +84,10 @@ def login_user(supabase):
                 st.session_state.location = user["location"]
 
                 # Persist in cookies (survives Ctrl+R)
-                cookies["authenticated"] = "true"
-                cookies["username"] = user["user_name"]
-                cookies["role"] = user["role"]
-                cookies["location"] = user["location"]
-                cookies.save()
+                cookies.set("authenticated", "true")
+                cookies.set("username", user["user_name"])
+                cookies.set("role", user["role"])
+                cookies.set("location", user["location"])
 
                 st.rerun()
             else:

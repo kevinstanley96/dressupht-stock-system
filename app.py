@@ -105,4 +105,4 @@ if "Password" in tab_dict:
 if "Graphs" in tab_dict:
     graphs.render_tab(tab_dict["Graphs"], supabase, username, role, loc_list, t)
 if "Messages" in tab_dict:
-    messages.render_tab(tab_dict["Messages"], supabase, username, role, loc_list, t)
+    messages.render_messages_tab(tab_dict["Messages"], supabase, username, role, loc_list, t)

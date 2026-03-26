@@ -9,3 +9,4 @@ pytz
 supabase
 squareup>=44.0.0
 bcrypt
+streamlit-cookies-manager

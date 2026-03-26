@@ -9,7 +9,7 @@ import os
 from square import Square
 from square.environment import SquareEnvironment
 import pytz
-from streamlit_cookies_controller import CookieController
+from streamlit_cookies_manager import EncryptedCookieManager
 
 # Import the global supabase client
 from utils.supabase_client import supabase
@@ -20,10 +20,10 @@ from utils.square_client import square_client
 # --- Timezone ---
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 
-# --- Setup cookie controller ---
-cookies = CookieController(
+# --- Setup cookie manager ---
+cookies = EncryptedCookieManager(
     prefix="myapp/",
-    password="a-very-secret-password"  # change this to something secure
+    password="super-secret-password"  # change this to something secure
 )
 
 if not cookies.ready():
@@ -41,26 +41,41 @@ square_client = Square(
 
 # --- LOGIN ---
 def login_user(supabase):
-    # Check if already authenticated via cookie
+    # --- Check cookie first ---
     if cookies.get("authenticated") == "true":
         st.session_state.authenticated = True
         st.session_state.username = cookies.get("username")
         st.session_state.role = cookies.get("role")
         st.session_state.location = cookies.get("location")
+
+        # Show logout button
+        if st.button("Logout"):
+            cookies["authenticated"] = "false"
+            cookies["username"] = ""
+            cookies["role"] = ""
+            cookies["location"] = ""
+            cookies.save()
+
+            st.session_state.authenticated = False
+            st.session_state.username = None
+            st.session_state.role = None
+            st.session_state.location = None
+            st.rerun()
+
         return (
             st.session_state.username,
             st.session_state.role,
             st.session_state.location,
         )
 
-    # Initialize session state
+    # --- Initialize session state if missing ---
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
         st.session_state.username = None
         st.session_state.role = None
         st.session_state.location = None
 
-    # Show login form if not authenticated
+    # --- Show login form if not authenticated ---
     if not st.session_state.authenticated:
         username_input = st.text_input("Username")
         password_input = st.text_input("Password", type="password")
@@ -83,11 +98,12 @@ def login_user(supabase):
                 st.session_state.role = user["role"]
                 st.session_state.location = user["location"]
 
-                # Persist in cookies (survives Ctrl+R)
-                cookies.set("authenticated", "true")
-                cookies.set("username", user["user_name"])
-                cookies.set("role", user["role"])
-                cookies.set("location", user["location"])
+                # Persist in cookies
+                cookies["authenticated"] = "true"
+                cookies["username"] = user["user_name"]
+                cookies["role"] = user["role"]
+                cookies["location"] = user["location"]
+                cookies.save()
 
                 st.rerun()
             else:

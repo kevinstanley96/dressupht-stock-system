@@ -72,9 +72,9 @@ with st.sidebar:
 
 # --- TABS SETUP BASED ON ROLE ---
 role_tabs = {
-    "Staff":   ["Library", "Mannequin", "Messages", "Password"],
-    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Graphs", "Messages", "Password"],
-    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Graphs", "Messages", "Password"]
+    "Staff":   ["Library", "Mannequin", "Password"],
+    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Graphs", "Password"],
+    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Graphs", "Password"]
 }
 
 tab_list = role_tabs.get(role, ["Library", "Password"])

@@ -8,7 +8,7 @@ from utils.sidebar import render_sidebar
 import base64
 
 # Import all tab modules
-from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password, graphs, messages
+from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password, graphs
 
 # --- App Setup ---
 st.set_page_config(
@@ -104,5 +104,3 @@ if "Password" in tab_dict:
     password.render_tab(tab_dict["Password"], supabase, username, role, loc_list, t)
 if "Graphs" in tab_dict:
     graphs.render_tab(tab_dict["Graphs"], supabase, username, role, loc_list, t)
-if "Messages" in tab_dict:
-    messages.render_messages_tab(tab_dict["Messages"], supabase, username, role, loc_list, t)

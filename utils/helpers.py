@@ -31,42 +31,54 @@ square_client = Square(
 
 # --- LOGIN ---
 def login_user(supabase):
+    # Initialize session state keys if missing
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
         st.session_state.username = None
         st.session_state.role = None
         st.session_state.location = None
+        st.session_state.supabase_session = None  # store Supabase session here
 
-    if not st.session_state.authenticated:
-        username_input = st.text_input("Username")
-        password_input = st.text_input("Password", type="password")
-
-        if st.button("Login"):
-            result = supabase.table("user_roles_locations").select("*").eq("user_name", username_input).execute()
-            if not result.data:
-                st.error("Invalid username")
-                return None
-
-            user = result.data[0]
-            stored_pw = user.get("password")
-
-            if stored_pw and password_input == stored_pw:
-                st.success(f"Welcome {user['user_name']}!")
-                st.session_state.authenticated = True
-                st.session_state.username = user["user_name"]
-                st.session_state.role = user["role"]
-                st.session_state.location = user["location"]
-                st.rerun()
-            else:
-                st.error("Invalid password")
-
-        return None
-    else:
+    # If already authenticated, reuse session (survives Ctrl+R)
+    if st.session_state.authenticated and st.session_state.username:
         return (
             st.session_state.username,
             st.session_state.role,
             st.session_state.location,
         )
+
+    # Otherwise show login form
+    username_input = st.text_input("Username")
+    password_input = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        # 🔒 Replace this with supabase.auth.sign_in_with_password later
+        result = supabase.table("user_roles_locations").select("*").eq("user_name", username_input).execute()
+        if not result.data:
+            st.error("Invalid username")
+            return None
+
+        user = result.data[0]
+        stored_pw = user.get("password")
+
+        if stored_pw and password_input == stored_pw:
+            st.success(f"Welcome {user['user_name']}!")
+
+            # Persist session info
+            st.session_state.authenticated = True
+            st.session_state.username = user["user_name"]
+            st.session_state.role = user["role"]
+            st.session_state.location = user["location"]
+
+            # If using Supabase auth, store session object here
+            # session = supabase.auth.sign_in_with_password({"email": username_input, "password": password_input})
+            # st.session_state.supabase_session = session
+
+            st.rerun()
+        else:
+            st.error("Invalid password")
+
+    return None
 
 # --- LOCATION ACCESS ---
 def get_allowed_locations(supabase, username):

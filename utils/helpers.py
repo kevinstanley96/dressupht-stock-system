@@ -9,6 +9,7 @@ import os
 from square import Square
 from square.environment import SquareEnvironment
 import pytz
+from streamlit_cookies_manager import EncryptedCookieManager
 
 # Import the global supabase client
 from utils.supabase_client import supabase
@@ -18,6 +19,15 @@ from utils.square_client import square_client
 
 # --- Timezone ---
 haiti_tz = pytz.timezone("America/Port-au-Prince")
+
+# --- Setup cookie manager ---
+cookies = EncryptedCookieManager(
+    prefix="myapp/",
+    password="a-very-secret-password"  # change this to something secure
+)
+
+if not cookies.ready():
+    st.stop()
 
 # --- Square connection ---
 # Load your token from environment or Streamlit secrets
@@ -31,54 +41,66 @@ square_client = Square(
 
 # --- LOGIN ---
 def login_user(supabase):
-    # Initialize session state keys if missing
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-        st.session_state.username = None
-        st.session_state.role = None
-        st.session_state.location = None
-        st.session_state.supabase_session = None  # store Supabase session here
-
-    # If already authenticated, reuse session (survives Ctrl+R)
-    if st.session_state.authenticated and st.session_state.username:
+    # Check if already authenticated via cookie
+    if cookies.get("authenticated") == "true":
+        st.session_state.authenticated = True
+        st.session_state.username = cookies.get("username")
+        st.session_state.role = cookies.get("role")
+        st.session_state.location = cookies.get("location")
         return (
             st.session_state.username,
             st.session_state.role,
             st.session_state.location,
         )
 
-    # Otherwise show login form
-    username_input = st.text_input("Username")
-    password_input = st.text_input("Password", type="password")
+    # Initialize session state
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+        st.session_state.username = None
+        st.session_state.role = None
+        st.session_state.location = None
 
-    if st.button("Login"):
-        # 🔒 Replace this with supabase.auth.sign_in_with_password later
-        result = supabase.table("user_roles_locations").select("*").eq("user_name", username_input).execute()
-        if not result.data:
-            st.error("Invalid username")
-            return None
+    # Show login form if not authenticated
+    if not st.session_state.authenticated:
+        username_input = st.text_input("Username")
+        password_input = st.text_input("Password", type="password")
 
-        user = result.data[0]
-        stored_pw = user.get("password")
+        if st.button("Login"):
+            result = supabase.table("user_roles_locations").select("*").eq("user_name", username_input).execute()
+            if not result.data:
+                st.error("Invalid username")
+                return None
 
-        if stored_pw and password_input == stored_pw:
-            st.success(f"Welcome {user['user_name']}!")
+            user = result.data[0]
+            stored_pw = user.get("password")
 
-            # Persist session info
-            st.session_state.authenticated = True
-            st.session_state.username = user["user_name"]
-            st.session_state.role = user["role"]
-            st.session_state.location = user["location"]
+            if stored_pw and password_input == stored_pw:
+                st.success(f"Welcome {user['user_name']}!")
 
-            # If using Supabase auth, store session object here
-            # session = supabase.auth.sign_in_with_password({"email": username_input, "password": password_input})
-            # st.session_state.supabase_session = session
+                # Persist in session_state
+                st.session_state.authenticated = True
+                st.session_state.username = user["user_name"]
+                st.session_state.role = user["role"]
+                st.session_state.location = user["location"]
 
-            st.rerun()
-        else:
-            st.error("Invalid password")
+                # Persist in cookies (survives Ctrl+R)
+                cookies["authenticated"] = "true"
+                cookies["username"] = user["user_name"]
+                cookies["role"] = user["role"]
+                cookies["location"] = user["location"]
+                cookies.save()
 
-    return None
+                st.rerun()
+            else:
+                st.error("Invalid password")
+
+        return None
+    else:
+        return (
+            st.session_state.username,
+            st.session_state.role,
+            st.session_state.location,
+        )
 
 # --- LOCATION ACCESS ---
 def get_allowed_locations(supabase, username):

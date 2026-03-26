@@ -8,7 +8,7 @@ from utils.sidebar import render_sidebar
 import base64
 
 # Import all tab modules
-from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password, graphs
+from tabs import library, arrival, inventory, depot, mannequin, compare, transfer, sales, admin, password, graphs, messages
 
 # --- App Setup ---
 st.set_page_config(
@@ -72,9 +72,9 @@ with st.sidebar:
 
 # --- TABS SETUP BASED ON ROLE ---
 role_tabs = {
-    "Staff":   ["Library", "Mannequin", "Password"],
-    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Graphs", "Password"],
-    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Graphs", "Password"]
+    "Staff":   ["Library", "Mannequin", "Messages", "Password"],
+    "Manager": ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Graphs", "Messages", "Password"],
+    "Admin":   ["Library", "Arrival", "Inventory", "Mannequin", "Depot", "Transfer", "Compare", "Sales", "Admin", "Graphs", "Messages", "Password"]
 }
 
 tab_list = role_tabs.get(role, ["Library", "Password"])
@@ -104,3 +104,5 @@ if "Password" in tab_dict:
     password.render_tab(tab_dict["Password"], supabase, username, role, loc_list, t)
 if "Graphs" in tab_dict:
     graphs.render_tab(tab_dict["Graphs"], supabase, username, role, loc_list, t)
+if "Messages" in tab_dict:
+    messages.render_tab(tab_dict["Messages"], supabase, username, role, loc_list, t)

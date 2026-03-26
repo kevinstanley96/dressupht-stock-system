@@ -57,6 +57,7 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                         t_qty = st.number_input("Quantity to Transfer", min_value=1, step=1)
                         t_date = st.date_input("Date", value=date.today())
                         if st.form_submit_button("Confirm Transfer"):
+                            # 1. Log transfer
                             transfer_entry = {
                                 "Date": str(t_date),
                                 "SKU": str(t_item['SKU']),
@@ -67,6 +68,42 @@ def render_tab(container, supabase, username, role, loc_list, t, master_inventor
                                 "User": username
                             }
                             supabase.table("Transfer").insert(transfer_entry).execute()
+
+                            # 2. Deduct from PV
+                            supabase.table("Master_Inventory").update({
+                                "Stock": int(t_item["Stock"]) - t_qty
+                            }).eq("SKU", t_item["SKU"]).eq("Location", "Pv").execute()
+
+                            # 3. Add to Canape-Vert
+                            cv_query = supabase.table("Master_Inventory").select("*")\
+                                .eq("Full Name", t_item["Full Name"])\
+                                .eq("Location", "Canape-Vert").execute()
+                            cv_data = cv_query.data
+
+                            if cv_data:
+                                # Found by name → update stock
+                                current_stock = cv_data[0]["Stock"]
+                                supabase.table("Master_Inventory").update({
+                                    "Stock": current_stock + t_qty
+                                }).eq("SKU", cv_data[0]["SKU"]).eq("Location", "Canape-Vert").execute()
+                            else:
+                                # No match by name → ask user for SKU
+                                st.warning("No matching item in Canape-Vert. Please enter the correct SKU.")
+                                new_sku = st.text_input("Enter SKU for Canape-Vert", key="cv_sku_input")
+
+                                if new_sku:
+                                    new_entry = {
+                                        "SKU": new_sku,
+                                        "Full Name": t_item["Full Name"],
+                                        "Category": t_item["Category"],
+                                        "Location": "Canape-Vert",
+                                        "Stock": t_qty,
+                                        "Price": t_item["Price"]
+                                    }
+                                    supabase.table("Master_Inventory").insert(new_entry).execute()
+                                    st.success(f"Inserted new SKU {new_sku} for {t_item['Full Name']} at Canape-Vert with {t_qty} units.")
+
+                            # 4. Success message
                             st.success(
                                 f"Transferred {t_qty} units of {t_item['Full Name']} from PV to Canape-Vert"
                             )

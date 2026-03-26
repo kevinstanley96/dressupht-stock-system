@@ -5,7 +5,7 @@ import pytz
 
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 
-def render_messages_tab(container, supabase, username, role, loc_list, t):
+def render_messages_tab(container, supabase, username, role, loc_list, t, user_id=None):
     """
     Message tab UI for wig requests and general questions.
     - supabase: initialized supabase client
@@ -13,6 +13,7 @@ def render_messages_tab(container, supabase, username, role, loc_list, t):
     - role: user role string
     - loc_list: list of locations available to the user
     - t: translations/dictionary (optional)
+    - user_id: UUID of the logged-in user (sender_id)
     """
     with container:
         st.header("✉️ Messages / Wig Requests")
@@ -21,11 +22,11 @@ def render_messages_tab(container, supabase, username, role, loc_list, t):
         st.subheader("Send a request or question")
         with st.form("message_form", clear_on_submit=True):
             sender = st.text_input("Your name", value=username or "", disabled=bool(username))
-            # location selection: staff limited to their location(s)
             if role in ["Admin", "Manager"]:
                 location = st.selectbox("Location", ["-- Select location --"] + sorted(loc_list), index=0)
+                if location == "-- Select location --":
+                    location = None
             else:
-                # for staff, default to first location in loc_list
                 location = loc_list[0] if loc_list else "Unknown"
 
             msg_type = st.radio("Type", ["Wig Request", "Question / Other"], index=0, horizontal=True)
@@ -34,18 +35,21 @@ def render_messages_tab(container, supabase, username, role, loc_list, t):
             submit = st.form_submit_button("📨 Send Message")
 
             if submit:
-                now_ht = datetime.now(haiti_tz).isoformat()
+                now_ht = datetime.now(haiti_tz)
                 record = {
-                    "sender": sender or "Anonymous",
+                    "id": None,  # let DB generate UUID/bigint
+                    "sender_id": user_id,  # must be auth.uid() in Supabase
+                    "sender_name": sender or "Anonymous",
                     "location": location,
                     "type": "WIG_REQUEST" if msg_type == "Wig Request" else "OTHER",
                     "subject": subject or "(no subject)",
                     "message": message or "",
                     "status": "OPEN",
-                    "created_at": now_ht
+                    "created_at": now_ht.isoformat(),
+                    "updated_at": now_ht.isoformat(),
                 }
                 try:
-                    supabase.table("Messages").insert(record).execute()
+                    supabase.table("messages").insert(record).execute()
                     st.success("Message sent. Thank you — we will follow up soon.")
                 except Exception as e:
                     st.error(f"Failed to send message: {e}")
@@ -56,9 +60,9 @@ def render_messages_tab(container, supabase, username, role, loc_list, t):
         if role in ["Admin", "Manager"]:
             st.subheader("Inbox — Recent messages")
             try:
-                res = supabase.table("Messages").select("*").order("created_at", desc=True).limit(200).execute()
+                res = supabase.table("messages").select("*").order("created_at", desc=True).limit(200).execute()
                 messages_df = pd.DataFrame(res.data) if res.data else pd.DataFrame(columns=[
-                    "id","sender","location","type","subject","message","status","created_at"
+                    "id","sender_name","location","type","subject","message","status","created_at"
                 ])
 
                 # Filters
@@ -81,37 +85,34 @@ def render_messages_tab(container, supabase, username, role, loc_list, t):
                 if df_view.empty:
                     st.info("No messages match the current filters.")
                 else:
-                    # Show a compact list with expanders for details
                     for _, row in df_view.sort_values("created_at", ascending=False).iterrows():
                         created = ""
                         try:
-                            created = datetime.fromisoformat(row.get("created_at")).astimezone(haiti_tz).strftime("%Y-%m-%d %H:%M")
+                            created = datetime.fromisoformat(str(row.get("created_at"))).astimezone(haiti_tz).strftime("%Y-%m-%d %H:%M")
                         except Exception:
-                            created = str(row.get("created_at", ""))
-                        header = f"{row.get('subject','(no subject)')} — {row.get('sender','')} ({row.get('location','')}) [{row.get('status','')}]"
+                            created = str(row.get("created_at",""))
+                        header = f"{row.get('subject','(no subject)')} — {row.get('sender_name','')} ({row.get('location','')}) [{row.get('status','')}]"
                         with st.expander(header):
                             st.markdown(f"**Type:** {row.get('type')}")
                             st.markdown(f"**Sent:** {created}")
-                            st.markdown(f"**Message:**")
+                            st.markdown("**Message:**")
                             st.write(row.get("message",""))
                             action_cols = st.columns([1,1,3])
                             if action_cols[0].button("Mark Resolved", key=f"resolve_{row.get('id')}"):
                                 try:
-                                    supabase.table("Messages").update({"status":"RESOLVED"}).eq("id", row.get("id")).execute()
+                                    supabase.table("messages").update({"status":"RESOLVED"}).eq("id", row.get("id")).execute()
                                     st.success("Marked as resolved.")
                                     st.experimental_rerun()
                                 except Exception as e:
                                     st.error(f"Could not update status: {e}")
                             if action_cols[1].button("Re-open", key=f"reopen_{row.get('id')}"):
                                 try:
-                                    supabase.table("Messages").update({"status":"OPEN"}).eq("id", row.get("id")).execute()
+                                    supabase.table("messages").update({"status":"OPEN"}).eq("id", row.get("id")).execute()
                                     st.success("Re-opened message.")
                                     st.experimental_rerun()
                                 except Exception as e:
                                     st.error(f"Could not update status: {e}")
-                            # quick reply area (optional)
                             reply = action_cols[2].text_input("Quick reply (not sent)", key=f"reply_{row.get('id')}")
-                            # Note: sending replies via email/notification would require additional integration
 
             except Exception as e:
                 st.error(f"Error loading messages: {e}")
@@ -120,7 +121,7 @@ def render_messages_tab(container, supabase, username, role, loc_list, t):
             # --- Recent messages for regular users (their own messages) ---
             st.subheader("Your recent messages")
             try:
-                res = supabase.table("Messages").select("*").eq("sender", username).order("created_at", desc=True).limit(50).execute()
+                res = supabase.table("messages").select("*").eq("sender_name", username).order("created_at", desc=True).limit(50).execute()
                 user_msgs = pd.DataFrame(res.data) if res.data else pd.DataFrame()
                 if user_msgs.empty:
                     st.info("You have not sent any messages yet.")
@@ -128,7 +129,7 @@ def render_messages_tab(container, supabase, username, role, loc_list, t):
                     for _, row in user_msgs.iterrows():
                         created = ""
                         try:
-                            created = datetime.fromisoformat(row.get("created_at")).astimezone(haiti_tz).strftime("%Y-%m-%d %H:%M")
+                            created = datetime.fromisoformat(str(row.get("created_at"))).astimezone(haiti_tz).strftime("%Y-%m-%d %H:%M")
                         except Exception:
                             created = str(row.get("created_at",""))
                         st.markdown(f"**{row.get('subject','(no subject)')}** — {created} — **{row.get('status','')}**")

@@ -1,120 +1,117 @@
 import streamlit as st
 import pandas as pd
-from supabase import create_client, Client
-from datetime import datetime, date
-import time
-import io
-import re
-import os
-from square import Square
-from square.environment import SquareEnvironment
+from datetime import datetime
+import uuid
 import pytz
-from streamlit_cookies_manager import EncryptedCookieManager
 
-# Import the global supabase client
 from utils.supabase_client import supabase
-
-# Import the Square client
 from utils.square_client import square_client
+from square.environment import SquareEnvironment
 
 # --- Timezone ---
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 
-# --- Setup cookie manager ---
-cookies = EncryptedCookieManager(
-    prefix="myapp/",
-    password="super-secret-password"  # change this to something secure
-)
+# Map internal names → Square names
+LOCATION_MAP = {
+    "Canape-Vert": "Dressup Haiti",
+    "Pv": "Dressupht Pv",
+    "Dressupht Pv": "Dressupht Pv"
+}
 
-if not cookies.ready():
-    st.stop()
-
-# --- Square connection ---
-# Load your token from environment or Streamlit secrets
-SQUARE_TOKEN = os.getenv("SQUARE_TOKEN") or st.secrets["SQUARE_ACCESS_TOKEN"]
-
-# Initialize Square client (sandbox for testing, production when live)
-square_client = Square(
-    token=SQUARE_TOKEN,
-    environment=SquareEnvironment.PRODUCTION   # or SquareEnvironment.SANDBOX
-)
 
 # --- LOGIN ---
 def login_user(supabase):
-    # --- Check cookie first ---
-    username_cookie = cookies.get("username")
-    if username_cookie:
-        st.session_state.authenticated = True
-        st.session_state.username = username_cookie
-        st.session_state.role = cookies.get(f"role_{username_cookie}")
-        st.session_state.location = cookies.get(f"location_{username_cookie}")
-
-        # Show logout button
-        if st.button("Logout"):
-            cookies[f"role_{username_cookie}"] = ""
-            cookies[f"location_{username_cookie}"] = ""
-            cookies["username"] = ""
-            cookies.save()
-
-            st.session_state.authenticated = False
-            st.session_state.username = None
-            st.session_state.role = None
-            st.session_state.location = None
-            st.rerun()
-
-        return (
-            st.session_state.username,
-            st.session_state.role,
-            st.session_state.location,
-        )
-
     # --- Initialize session state if missing ---
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
         st.session_state.username = None
         st.session_state.role = None
         st.session_state.location = None
+        st.session_state.session_token = None
 
-    # --- Show login form if not authenticated ---
-    if not st.session_state.authenticated:
-        username_input = st.text_input("Username")
-        password_input = st.text_input("Password", type="password")
+    # --- If already authenticated this session, validate token against Supabase ---
+    if st.session_state.authenticated and st.session_state.session_token:
+        token_check = supabase.table("user_sessions") \
+            .select("*") \
+            .eq("session_token", st.session_state.session_token) \
+            .execute()
 
-        if st.button("Login"):
-            result = supabase.table("user_roles_locations").select("*").eq("user_name", username_input).execute()
-            if not result.data:
-                st.error("Invalid username")
-                return None
+        if token_check.data:
+            # Show logout button in sidebar
+            with st.sidebar:
+                if st.button("🚪 Logout"):
+                    _logout(supabase)
+            return (
+                st.session_state.username,
+                st.session_state.role,
+                st.session_state.location,
+            )
+        else:
+            # Token no longer valid (e.g. deleted server-side), force re-login
+            _clear_session()
 
-            user = result.data[0]
-            stored_pw = user.get("password")
+    # --- Show login form ---
+    username_input = st.text_input("Username")
+    password_input = st.text_input("Password", type="password")
 
-            if stored_pw and password_input == stored_pw:
-                st.success(f"Welcome {user['user_name']}!")
+    if st.button("Login"):
+        result = supabase.table("user_roles_locations") \
+            .select("*") \
+            .eq("user_name", username_input) \
+            .execute()
 
-                # Persist in session_state
-                st.session_state.authenticated = True
-                st.session_state.username = user["user_name"]
-                st.session_state.role = user["role"]
-                st.session_state.location = user["location"]
+        if not result.data:
+            st.error("Invalid username")
+            return None
 
-                # Persist in cookies (scoped by username)
-                cookies["username"] = user["user_name"]
-                cookies[f"role_{user['user_name']}"] = user["role"]
-                cookies[f"location_{user['user_name']}"] = user["location"]
-                cookies.save()
+        user = result.data[0]
+        stored_pw = user.get("password")
 
-                st.rerun()
-            else:
-                st.error("Invalid password")
+        if stored_pw and password_input == stored_pw:
+            # Generate a unique session token for this device/login
+            session_token = str(uuid.uuid4())
 
-        return None
-    else:
-        return (
-            st.session_state.username,
-            st.session_state.role,
-            st.session_state.location,
-        )
+            # Store token in Supabase
+            supabase.table("user_sessions").insert({
+                "session_token": session_token,
+                "username": user["user_name"],
+                "created_at": datetime.now(haiti_tz).isoformat()
+            }).execute()
+
+            # Persist in session_state only (device-local)
+            st.session_state.authenticated = True
+            st.session_state.username = user["user_name"]
+            st.session_state.role = user["role"]
+            st.session_state.location = user["location"]
+            st.session_state.session_token = session_token
+
+            st.success(f"Welcome {user['user_name']}!")
+            st.rerun()
+        else:
+            st.error("Invalid password")
+
+    return None
+
+
+def _logout(supabase):
+    """Delete session token from Supabase and clear session state."""
+    if st.session_state.get("session_token"):
+        supabase.table("user_sessions") \
+            .delete() \
+            .eq("session_token", st.session_state.session_token) \
+            .execute()
+    _clear_session()
+    st.rerun()
+
+
+def _clear_session():
+    """Reset all session state auth fields."""
+    st.session_state.authenticated = False
+    st.session_state.username = None
+    st.session_state.role = None
+    st.session_state.location = None
+    st.session_state.session_token = None
+
 
 # --- LOCATION ACCESS ---
 def get_allowed_locations(supabase, username):
@@ -128,32 +125,30 @@ def get_allowed_locations(supabase, username):
     except Exception:
         return []
 
+
+# --- CLEAN AND COMBINE EXCEL FILES ---
 def clean_and_combine(file_cv, file_pv):
     def process_file(file, loc_name):
         df = pd.read_excel(file, skiprows=1)
         df.columns = [str(c).strip() for c in df.columns]
 
-        # Column mapping
         mapping = {
             'Item Name': 'Full Name',
             'SKU': 'SKU',
             'Categories': 'Category',
             'Price': 'Price',
-            'Token': 'Token',              # Matches Square Excel
-            'Square Item ID': 'square_item_id'  # ✅ new mapping if present
+            'Token': 'Token',
+            'Square Item ID': 'square_item_id'
         }
         df = df.rename(columns=mapping)
 
-        # Stock column depends on location
         stock_col = "Current Quantity Dressup Haiti" if loc_name == "Canape-Vert" else "Current Quantity Dressupht Pv"
 
-        # Ensure required columns exist
         if 'Token' not in df.columns:
             df['Token'] = "NO_TOKEN"
         if 'square_item_id' not in df.columns:
             df['square_item_id'] = "NO_ID"
 
-        # Clean and normalize fields
         df['Stock'] = pd.to_numeric(df[stock_col], errors='coerce').fillna(0).astype(int) if stock_col in df.columns else 0
         df['SKU'] = df['SKU'].astype(str).str.strip().replace(['nan', ''], 'NO_SKU')
         df['Category'] = df['Category'].fillna("Uncategorized").astype(str)
@@ -166,12 +161,6 @@ def clean_and_combine(file_cv, file_pv):
     df2 = process_file(file_pv, "Pv")
     return pd.concat([df1, df2], ignore_index=True)
 
-# Map internal names → Square names
-LOCATION_MAP = {
-    "Canape-Vert": "Dressup Haiti",
-    "Pv": "Dressupht Pv",
-    "Dressupht Pv": "Dressupht Pv"   # ✅ add this line
-}
 
 # --- SAFE DATAFRAME DISPLAY ---
 def safe_dataframe(df, cols, empty_msg="No data available.", key=None):
@@ -180,6 +169,7 @@ def safe_dataframe(df, cols, empty_msg="No data available.", key=None):
         st.dataframe(df[cols], width="stretch", hide_index=True, key=key)
     else:
         st.info(empty_msg)
+
 
 # --- SEARCH INVENTORY ---
 def search_inventory(df, query):
@@ -194,12 +184,14 @@ def search_inventory(df, query):
         df.get('Category', pd.Series("", index=df.index)).str.lower().str.contains(q, na=False)
     ]
 
+
 # --- SANITIZE SHEET NAME ---
 def sanitize_sheet_name(name):
     """Ensure Excel sheet names are valid (<=31 chars, no special chars)."""
-    invalid_chars = ['\\','/','*','?','[',']',':']
+    invalid_chars = ['\\', '/', '*', '?', '[', ']', ':']
     safe = ''.join(c for c in name if c not in invalid_chars)
     return safe[:31]
+
 
 # --- NORMALIZE LOCATION ---
 def normalize_location(loc):
@@ -213,6 +205,7 @@ def normalize_location(loc):
         return "Canape-Vert"
     return loc.title()
 
+
 # --- HIGH STOCK ALERT ---
 def show_high_stock_alert(df, location, threshold=50, key=None):
     """Display items with stock above threshold."""
@@ -220,23 +213,22 @@ def show_high_stock_alert(df, location, threshold=50, key=None):
         high_stock = df[df['Stock'] > threshold]
         if not high_stock.empty:
             st.warning(f"⚠️ {len(high_stock)} items in {location} exceed {threshold} units")
-            st.dataframe(high_stock[['SKU','Full Name','Stock']], width="stretch", hide_index=True, key=key)
+            st.dataframe(high_stock[['SKU', 'Full Name', 'Stock']], width="stretch", hide_index=True, key=key)
         else:
             st.success(f"No items in {location} exceed {threshold} units")
     else:
         st.info(f"No data available for {location}.")
 
+
+# --- SYNC INVENTORY ---
 def sync_inventory(location_name):
     try:
-        # --- Get Square locations ---
         locations_response = square_client.locations.list()
         location_lookup = {loc.id: (loc.name or "") for loc in locations_response.locations}
 
-        # --- Map normalized name back to Square’s actual name ---
         square_name = LOCATION_MAP.get(location_name, location_name or "Unknown")
         square_name = (square_name or "").strip()
 
-        # --- Find matching Square location ID ---
         location_id = next(
             (lid for lid, lname in location_lookup.items() if (lname or "").strip() == square_name),
             None
@@ -245,7 +237,6 @@ def sync_inventory(location_name):
             st.sidebar.error(f"❌ Location '{square_name}' not found in Square.")
             return
 
-        # --- Get last MISE time ---
         last_mise = supabase.table("sync_log") \
             .select("synced_at") \
             .eq("location", location_name) \
@@ -260,7 +251,6 @@ def sync_inventory(location_name):
             if synced_at:
                 last_mise_time = datetime.fromisoformat(synced_at).astimezone(haiti_tz)
 
-        # --- Get last SSD time ---
         last_ssd = supabase.table("sync_log") \
             .select("synced_at") \
             .eq("location", location_name) \
@@ -275,14 +265,11 @@ def sync_inventory(location_name):
             if synced_at:
                 last_ssd_time = datetime.fromisoformat(synced_at).astimezone(haiti_tz)
 
-        # --- Determine cutoff time ---
         cutoff_time = last_ssd_time if last_ssd_time else last_mise_time
 
-        # --- Progress bar for SSD ---
         progress = st.progress(0)
         progress.progress(20)
 
-        # --- Fetch orders for this location ---
         response = square_client.orders.search(location_ids=[location_id], limit=200)
         progress.progress(40)
 
@@ -291,7 +278,6 @@ def sync_inventory(location_name):
             for order in response.orders:
                 created_dt = datetime.fromisoformat(order.created_at.replace("Z", "+00:00")).astimezone(haiti_tz)
 
-                # ✅ Only process orders created AFTER cutoff
                 if cutoff_time and created_dt <= cutoff_time:
                     continue
 
@@ -301,7 +287,6 @@ def sync_inventory(location_name):
                         product_name = (item.name or "").strip()
                         product_token = (item.catalog_object_id or "").strip()
 
-                        # --- Lookup category/location from Master_Inventory ---
                         category = "Uncategorized"
                         inv_result = supabase.table("Master_Inventory").select("Category, Location").eq("Token", product_token).execute()
                         if inv_result.data:
@@ -311,7 +296,6 @@ def sync_inventory(location_name):
                             if inv_result.data:
                                 category = inv_result.data[0].get("Category", "Uncategorized")
 
-                        # ✅ Update inventory stock
                         current = supabase.table("Master_Inventory").select("Stock").eq("Token", product_token).execute()
                         if current.data:
                             new_qty = current.data[0]["Stock"] - qty_sold
@@ -323,7 +307,6 @@ def sync_inventory(location_name):
                                     new_qty = current.data[0]["Stock"] - qty_sold
                                     supabase.table("Master_Inventory").update({"Stock": new_qty}).eq("Full Name", product_name).execute()
 
-                        # ✅ Log into sales table with upsert
                         supabase.table("Sales").upsert(
                             {
                                 "order_id": order.id,
@@ -338,7 +321,7 @@ def sync_inventory(location_name):
                                 "created_at": created_dt.isoformat(),
                                 "updated_at": datetime.now(haiti_tz).isoformat()
                             },
-                            on_conflict="order_id,product_token"  # ✅ key fix
+                            on_conflict="order_id,product_token"
                         ).execute()
 
                 updates.append(order.id)

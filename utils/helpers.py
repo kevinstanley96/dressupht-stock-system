@@ -1,12 +1,10 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import uuid
 import pytz
 
 from utils.supabase_client import supabase
 from utils.square_client import square_client
-from square.environment import SquareEnvironment
 
 # --- Timezone ---
 haiti_tz = pytz.timezone("America/Port-au-Prince")
@@ -27,27 +25,25 @@ def login_user(supabase):
         st.session_state.username = None
         st.session_state.role = None
         st.session_state.location = None
-        st.session_state.session_token = None
 
-    # --- If already authenticated this session, validate token against Supabase ---
-    if st.session_state.authenticated and st.session_state.session_token:
-        token_check = supabase.table("user_sessions") \
-            .select("*") \
-            .eq("session_token", st.session_state.session_token) \
+    # --- If already authenticated, re-validate user still exists in DB ---
+    if st.session_state.authenticated and st.session_state.username:
+        check = supabase.table("user_roles_locations") \
+            .select("user_name") \
+            .eq("user_name", st.session_state.username) \
             .execute()
 
-        if token_check.data:
-            # Show logout button in sidebar
+        if check.data:
             with st.sidebar:
                 if st.button("🚪 Logout"):
-                    _logout(supabase)
+                    _logout()
             return (
                 st.session_state.username,
                 st.session_state.role,
                 st.session_state.location,
             )
         else:
-            # Token no longer valid (e.g. deleted server-side), force re-login
+            # User was removed from DB, force re-login
             _clear_session()
 
     # --- Show login form ---
@@ -68,22 +64,10 @@ def login_user(supabase):
         stored_pw = user.get("password")
 
         if stored_pw and password_input == stored_pw:
-            # Generate a unique session token for this device/login
-            session_token = str(uuid.uuid4())
-
-            # Store token in Supabase
-            supabase.table("user_sessions").insert({
-                "session_token": session_token,
-                "username": user["user_name"],
-                "created_at": datetime.now(haiti_tz).isoformat()
-            }).execute()
-
-            # Persist in session_state only (device-local)
             st.session_state.authenticated = True
             st.session_state.username = user["user_name"]
             st.session_state.role = user["role"]
             st.session_state.location = user["location"]
-            st.session_state.session_token = session_token
 
             st.success(f"Welcome {user['user_name']}!")
             st.rerun()
@@ -93,13 +77,8 @@ def login_user(supabase):
     return None
 
 
-def _logout(supabase):
-    """Delete session token from Supabase and clear session state."""
-    if st.session_state.get("session_token"):
-        supabase.table("user_sessions") \
-            .delete() \
-            .eq("session_token", st.session_state.session_token) \
-            .execute()
+def _logout():
+    """Clear session state and rerun."""
     _clear_session()
     st.rerun()
 
@@ -110,7 +89,6 @@ def _clear_session():
     st.session_state.username = None
     st.session_state.role = None
     st.session_state.location = None
-    st.session_state.session_token = None
 
 
 # --- LOCATION ACCESS ---

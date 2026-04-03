@@ -45,6 +45,17 @@ st.markdown(
 language = st.sidebar.selectbox("🌐 Language / Langue", ["en", "fr"], index=0)
 t = get_translations(language)
 
+# --- Initialize session state defaults (must run before login_user) ---
+for key, default in {
+    "authenticated": False,
+    "username": None,
+    "role": None,
+    "location": None,
+    "session_token": None,
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
 # --- Authentication ---
 user_info = login_user(supabase)
 if not user_info:

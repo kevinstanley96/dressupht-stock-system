@@ -3,6 +3,7 @@ import pandas as pd
 import io
 import time
 from datetime import datetime
+import httpx
 from utils.helpers import sanitize_sheet_name, safe_dataframe
 
 # --- Category merge map ---
@@ -11,6 +12,25 @@ CATEGORY_MERGE_MAP = {
     "Bob Lace Frontal Droit": "Bob Lace Frontal",
     "Perruque Lace Frontal": "Bob Lace Frontal"
 }
+
+# --- Safe batch insert helper ---
+def safe_batch_insert(supabase, table_name, records, batch_size=200, max_retries=3, delay=2):
+    total = len(records)
+    for i in range(0, total, batch_size):
+        batch = records[i:i+batch_size]
+        attempt = 0
+        while attempt < max_retries:
+            try:
+                supabase.table(table_name).insert(batch).execute()
+                break
+            except httpx.RemoteProtocolError as e:
+                attempt += 1
+                if attempt < max_retries:
+                    print(f"⚠️ RemoteProtocolError on batch {i//batch_size+1}, retrying ({attempt}/{max_retries})...")
+                    time.sleep(delay)
+                else:
+                    print(f"❌ Failed to insert batch {i//batch_size+1} after {max_retries} retries: {e}")
+                    raise
 
 def render_tab(container, supabase, username, role, loc_list, t):
     with container:
@@ -59,10 +79,11 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 key="inventory_data_editor"
             )
 
-            # Save audit entries
+            # --- Save audit entries (batched) ---
             if st.button("✅ Save Audit", key="inventory_save_audit"):
+                audit_entries = []
                 for _, row in edited_df.iterrows():
-                    audit_entry = {
+                    audit_entries.append({
                         "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "Name": row['Full Name'],
                         "Category": sel_cat,  # merged category
@@ -71,10 +92,15 @@ def render_tab(container, supabase, username, role, loc_list, t):
                         "Discrepancy": row['Total_Physical'] - row['Stock'],
                         "Counter_Name": username,
                         "location": sel_loc
-                    }
-                    supabase.table("Inventory").insert(audit_entry).execute()
-                st.success("Audit saved successfully!")
-                time.sleep(1); st.rerun()
+                    })
+
+                try:
+                    safe_batch_insert(supabase, "Inventory", audit_entries)
+                    st.success("Audit saved successfully!")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error saving audit: {e}")
         else:
             st.info("No data in Master_Inventory.")
 

@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import pytz
 from utils.helpers import clean_and_combine, sync_inventory
+import numpy as np
 
 haiti_tz = pytz.timezone("America/Port-au-Prince")
 
@@ -50,35 +51,37 @@ def render_sidebar(username, role, loc_list, supabase):
             try:
                 progress = st.progress(0)
                 progress.progress(20)
-
+        
                 # Combine and clean
                 combined_df = clean_and_combine(file_cv, file_pv)
                 progress.progress(40)
-
+        
                 # 🔧 Drop unwanted columns like 'Unnamed: 0'
                 drop_cols = [c for c in combined_df.columns if c not in [
                     "SKU", "Full Name", "Category", "Stock", "Price", "Location", "Token", "square_item_id"
                 ]]
                 if drop_cols:
                     combined_df = combined_df.drop(columns=drop_cols)
-
-                # Replace NaN with None
-                combined_df = combined_df.where(pd.notnull(combined_df), None)
-
+        
+                # ✅ Sanitize values
+                # Replace NaN, inf, -inf with None
+                combined_df = combined_df.replace([np.nan, np.inf, -np.inf], None)
+        
                 # Ensure numeric columns are JSON-safe
                 for col in ["Stock", "Price"]:
                     if col in combined_df.columns:
-                        combined_df[col] = combined_df[col].astype(float).astype(object)
-
+                        combined_df[col] = pd.to_numeric(combined_df[col], errors="coerce").fillna(0).astype(float)
+        
+                # Convert to records
                 records = combined_df.to_dict(orient="records")
-
+        
                 # Replace Master_Inventory with fresh data
                 supabase.table("Master_Inventory").delete().neq("id", 0).execute()
                 progress.progress(60)
-
+        
                 supabase.table("Master_Inventory").insert(records).execute()
                 progress.progress(80)
-
+        
                 # ✅ Log manual sync time
                 now_ht = datetime.now(haiti_tz).isoformat()
                 supabase.table("sync_log").insert([
@@ -86,7 +89,7 @@ def render_sidebar(username, role, loc_list, supabase):
                     {"location": "Dressupht Pv", "synced_at": now_ht, "type": "MISE"}
                 ]).execute()
                 progress.progress(100)
-
+        
                 st.success("✅ Master_Inventory refreshed and manual sync logged.")
             except Exception as e:
                 st.error(f"❌ Error during overwrite & sync: {e}")

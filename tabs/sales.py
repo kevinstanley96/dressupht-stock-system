@@ -177,58 +177,72 @@ def render_tab(container, supabase, square_client, username, role, loc_list, t):
         
                 if data_hist:
                     df_hist = pd.DataFrame(data_hist)
-        
-                    # ✅ Date range filter
-                    col1, col2 = st.columns(2)
-                    start_date = col1.date_input(
-                        "Start Date",
-                        value=cutoff_date,
-                        min_value=cutoff_date,
-                        key="sales_hist_start"
-                    )
-                    end_date = col2.date_input(
-                        "End Date",
-                        value=date.today(),
-                        min_value=cutoff_date,
-                        key="sales_hist_end"
-                    )
-        
-                    # ✅ Search filter by SKU or Name
+
+                    # --- Search bar (SKU or Product Name) ---
                     search_query = st.text_input(
-                        "🔍 Search Sales History",
-                        placeholder="Enter SKU or Product Name...",
+                        "🔍 Search by SKU or Product Name",
+                        placeholder="e.g. SKU-001 or Coca Cola...",
                         key="sales_hist_search"
                     ).strip().lower()
-        
-                    # Apply filters
-                    df_hist_filtered = df_hist[
-                        (df_hist["Date"] >= start_date) & (df_hist["Date"] <= end_date)
-                    ]
-        
-                    if search_query:
-                        df_hist_filtered = df_hist_filtered[
-                            df_hist_filtered["SKU"].str.lower().str.contains(search_query) |
-                            df_hist_filtered["Product"].str.lower().str.contains(search_query)
+
+                    # --- Date range selector ---
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        start_date = st.date_input(
+                            "📅 Start Date",
+                            value=cutoff_date,
+                            min_value=cutoff_date,
+                            max_value=date.today(),
+                            key="sales_hist_start"
+                        )
+                    with col2:
+                        end_date = st.date_input(
+                            "📅 End Date",
+                            value=date.today(),
+                            min_value=cutoff_date,
+                            max_value=date.today(),
+                            key="sales_hist_end"
+                        )
+
+                    if start_date > end_date:
+                        st.warning("⚠️ Start date cannot be after end date.")
+                    else:
+                        # Always apply date range first
+                        df_hist_filtered = df_hist[
+                            (df_hist["Date"] >= start_date) &
+                            (df_hist["Date"] <= end_date)
                         ]
-        
-                    st.success(f"✅ Showing {len(df_hist_filtered)} product-level sales "
-                               f"from {start_date} to {end_date}")
-        
-                    summary_hist = df_hist_filtered.groupby("Location").size().reset_index(name="Order Count")
-                    st.subheader(f"📍 Orders per Location ({start_date} → {end_date})")
-                    st.table(summary_hist)
-        
-                    st.dataframe(df_hist_filtered, width="stretch", hide_index=True)
-        
-                    # ✅ Download filtered results
-                    csv = df_hist_filtered.to_csv(index=False).encode("utf-8")
-                    st.download_button(
-                        label="⬇️ Download Filtered Sales CSV",
-                        data=csv,
-                        file_name=f"sales_{start_date}_{end_date}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
+
+                        # Apply SKU/name search on top of the date range
+                        if search_query:
+                            df_hist_filtered = df_hist_filtered[
+                                df_hist_filtered["SKU"].str.lower().str.contains(search_query, na=False) |
+                                df_hist_filtered["Product"].str.lower().str.contains(search_query, na=False)
+                            ]
+
+                        date_label = (
+                            str(start_date) if start_date == end_date
+                            else f"{start_date} → {end_date}"
+                        )
+
+                        st.success(f"✅ Showing {len(df_hist_filtered)} product-level sales ({date_label})")
+
+                        summary_hist = df_hist_filtered.groupby("Location").size().reset_index(name="Order Count")
+                        st.subheader(f"📍 Orders per Location ({date_label})")
+                        st.table(summary_hist)
+
+                        st.dataframe(df_hist_filtered, width="stretch", hide_index=True)
+
+                        # Download button for filtered results
+                        if not df_hist_filtered.empty:
+                            csv_hist = df_hist_filtered.to_csv(index=False).encode("utf-8")
+                            st.download_button(
+                                label="⬇️ Download Filtered CSV",
+                                data=csv_hist,
+                                file_name=f"sales_{start_date}_to_{end_date}.csv",
+                                mime="text/csv",
+                                use_container_width=True
+                            )
                 else:
                     st.info("No sales found after 03/20/2026.")
         

@@ -67,6 +67,9 @@ def render_sidebar(username, role, loc_list, supabase):
                 # Replace NaN, inf, -inf with None
                 combined_df = combined_df.replace([np.nan, np.inf, -np.inf], None)
         
+                # Drop rows with missing SKU (to satisfy NOT NULL constraint)
+                combined_df = combined_df.dropna(subset=["SKU"])
+        
                 # Ensure numeric columns are JSON-safe
                 for col in ["Stock", "Price"]:
                     if col in combined_df.columns:

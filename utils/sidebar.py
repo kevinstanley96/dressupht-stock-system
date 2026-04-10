@@ -100,7 +100,7 @@ def render_sidebar(username, role, loc_list, supabase):
         # --- SYNC BUTTONS (Admin/Manager only) ---
         if role in ["Admin", "Manager"]:
             st.header("🔄 Inventory Sync")
-    
+        
             # Manual buttons (still available anytime)
             if st.button("Sync Inventory - Dressupht Pv", key="sync_pv_btn"):
                 sync_inventory("Dressupht Pv")
@@ -108,28 +108,38 @@ def render_sidebar(username, role, loc_list, supabase):
             if st.button("Sync Inventory - Canape-Vert", key="sync_cv_btn"):
                 sync_inventory("Canape-Vert")
                 st.session_state["last_auto_sync"] = datetime.now(haiti_tz)
-    
-            # Ensure session state key exists
+        
+            # Ensure session state keys exist
             if "last_auto_sync" not in st.session_state:
                 st.session_state["last_auto_sync"] = None
-    
+            if "auto_sync_enabled" not in st.session_state:
+                st.session_state["auto_sync_enabled"] = True  # default ON
+        
+            # --- STOP Auto Sync button ---
+            if st.button("🛑 STOP Auto Sync", key="stop_auto_sync_btn"):
+                st.session_state["auto_sync_enabled"] = False
+                st.warning("Auto-sync has been stopped.")
+        
             # --- AUTO SYNC EVERY 30 MINUTES (checks on each rerun) ---
             now_ht = datetime.now(haiti_tz)
             last_sync = st.session_state.get("last_auto_sync")
-    
-            if not last_sync or (now_ht - last_sync) >= timedelta(minutes=30):
-                # Run both syncs automatically
-                sync_inventory("Dressupht Pv")
-                sync_inventory("Canape-Vert")
-    
-                # Log auto-sync event
-                supabase.table("sync_log").insert([
-                    {"location": "Dressupht Pv", "synced_at": now_ht.isoformat(), "type": "AUTO"},
-                    {"location": "Canape-Vert", "synced_at": now_ht.isoformat(), "type": "AUTO"}
-                ]).execute()
-    
-                st.session_state["last_auto_sync"] = now_ht
-                st.info("✅ Auto-sync triggered (every 30 minutes)")
+        
+            if st.session_state.get("auto_sync_enabled", True):
+                if not last_sync or (now_ht - last_sync) >= timedelta(minutes=30):
+                    # Run both syncs automatically
+                    sync_inventory("Dressupht Pv")
+                    sync_inventory("Canape-Vert")
+        
+                    # Log auto-sync event
+                    supabase.table("sync_log").insert([
+                        {"location": "Dressupht Pv", "synced_at": now_ht.isoformat(), "type": "AUTO"},
+                        {"location": "Canape-Vert", "synced_at": now_ht.isoformat(), "type": "AUTO"}
+                    ]).execute()
+        
+                    st.session_state["last_auto_sync"] = now_ht
+                    st.info("✅ Auto-sync triggered (every 30 minutes)")
+            else:
+                st.info("⏸ Auto-sync is currently disabled.")
 
     # --- LOGOUT (always last) ---
     if st.session_state.get("authenticated", False):

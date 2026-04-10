@@ -5,6 +5,13 @@ import time
 from datetime import datetime
 from utils.helpers import sanitize_sheet_name, safe_dataframe
 
+# --- Category merge map ---
+CATEGORY_MERGE_MAP = {
+    "Bob Lace Frontal Curly": "Bob Lace Frontal",
+    "Bob Lace Frontal Droit": "Bob Lace Frontal",
+    "Perruque Lace Frontal": "Bob Lace Frontal"
+}
+
 def render_tab(container, supabase, username, role, loc_list, t):
     with container:
         st.header(t["inventory_header"])
@@ -30,13 +37,18 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 st.write(f"📍 {t['location']}: {', '.join(loc_list)}")
                 sel_loc = loc_list[0]
 
-            # Category selection
+            # --- Apply category merge ---
+            inv_df["Category_Merged"] = inv_df["Category"].replace(CATEGORY_MERGE_MAP)
+
+            # Category selection (merged)
             sel_cat = st.selectbox(
                 "Select Category",
-                sorted(inv_df['Category'].unique()),
+                sorted(inv_df["Category_Merged"].unique()),
                 key="inventory_category_select"
             )
-            cat_df = inv_df[inv_df['Category'] == sel_cat].copy()
+
+            # Filter by merged category
+            cat_df = inv_df[inv_df["Category_Merged"] == sel_cat].copy()
 
             # Editable physical counts
             cat_df['Total_Physical'] = 0
@@ -53,7 +65,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                     audit_entry = {
                         "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "Name": row['Full Name'],
-                        "Category": sel_cat,
+                        "Category": sel_cat,  # merged category
                         "System_Stock": row['Stock'],
                         "Total_Physical": row['Total_Physical'],
                         "Discrepancy": row['Total_Physical'] - row['Stock'],
@@ -74,6 +86,9 @@ def render_tab(container, supabase, username, role, loc_list, t):
             if aud_log_res.data:
                 df_log = pd.DataFrame(aud_log_res.data)
 
+                # Apply category merge to history
+                df_log["Category_Merged"] = df_log["Category"].replace(CATEGORY_MERGE_MAP)
+
                 # Filter by location
                 if role == "Staff":
                     df_log = df_log[df_log['location'].isin(loc_list)]
@@ -82,8 +97,8 @@ def render_tab(container, supabase, username, role, loc_list, t):
 
                 output, summary_rows = io.BytesIO(), []
                 with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    for cat in sorted(df_log['Category'].unique()):
-                        cat_df = df_log[df_log['Category'] == cat]
+                    for cat in sorted(df_log['Category_Merged'].unique()):
+                        cat_df = df_log[df_log['Category_Merged'] == cat]
                         safe_name = sanitize_sheet_name(cat)
                         cat_df.to_excel(writer, sheet_name=safe_name, index=False)
 

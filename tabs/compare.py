@@ -15,13 +15,23 @@ def render_tab(container, supabase, username, role, loc_list, t):
             if "Category" not in master_inventory.columns:
                 master_inventory["Category"] = "Uncategorized"
 
-            # ✅ Category selection (always visible)
-            all_categories = sorted(master_inventory["Category"].dropna().unique().tolist())
-            selected_categories = st.multiselect(
-                "📂 Select Categories to Compare",
-                options=all_categories,
-                default=all_categories if all_categories else []
-            )
+            # --- Search + Category filter side by side ---
+            col1, col2 = st.columns([2, 2])  # adjust ratio if needed
+
+            with col1:
+                comp_search = st.text_input(
+                    "🔍 Search Comparison",
+                    placeholder="Filter by Name, SKU, Token, or Category...",
+                    key="compare_search_input"
+                ).strip().lower()
+
+            with col2:
+                all_categories = sorted(master_inventory["Category"].dropna().unique().tolist())
+                selected_categories = st.multiselect(
+                    "📂 Categories",
+                    options=all_categories,
+                    default=all_categories if all_categories else []
+                )
 
             # PART A: SIDE-BY-SIDE COMPARISON
             st.subheader("Location Comparison (CV vs PV)")
@@ -51,12 +61,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
                 }
             )
 
-            # ✅ Library-style search with unique key
-            comp_search = st.text_input(
-                "🔍 Search Comparison",
-                placeholder="Filter by Name, SKU, Token, or Category...",
-                key="compare_search_input"
-            ).strip().lower()
+            # ✅ Apply search filter
             if comp_search:
                 display_comp = search_inventory(
                     display_comp.rename(columns={"Wig Name": "Full Name"}),

@@ -11,34 +11,44 @@ def render_tab(container, supabase, username, role, loc_list, t):
         master_inventory = pd.DataFrame(inv_query.data) if inv_query.data else pd.DataFrame()
 
         if not master_inventory.empty:
-            # ✅ Category selection
-            all_categories = sorted(master_inventory['Category'].dropna().unique().tolist())
+            # ✅ Ensure Category column exists
+            if "Category" not in master_inventory.columns:
+                master_inventory["Category"] = "Uncategorized"
+
+            # ✅ Category selection (always visible)
+            all_categories = sorted(master_inventory["Category"].dropna().unique().tolist())
             selected_categories = st.multiselect(
                 "📂 Select Categories to Compare",
                 options=all_categories,
-                default=all_categories  # show all by default
+                default=all_categories if all_categories else []
             )
 
             # PART A: SIDE-BY-SIDE COMPARISON
             st.subheader("Location Comparison (CV vs PV)")
             df_cv = master_inventory[
-                (master_inventory['Location']=="Canape-Vert") &
-                (master_inventory['Category'].isin(selected_categories))
-            ][['SKU','Full Name','Stock','Category']]
+                (master_inventory["Location"] == "Canape-Vert") &
+                (master_inventory["Category"].isin(selected_categories))
+            ][["SKU", "Full Name", "Stock", "Category"]]
 
             df_pv = master_inventory[
-                (master_inventory['Location']=="Pv") &
-                (master_inventory['Category'].isin(selected_categories))
-            ][['SKU','Full Name','Stock','Category']]
+                (master_inventory["Location"] == "Pv") &
+                (master_inventory["Category"].isin(selected_categories))
+            ][["SKU", "Full Name", "Stock", "Category"]]
 
-            comparison_df = pd.merge(df_cv, df_pv, on="SKU", how="outer", suffixes=('_CV','_PV'))
-            comparison_df['Full Name_CV'] = comparison_df['Full Name_CV'].fillna(comparison_df['Full Name_PV'])
-            comparison_df['Stock_CV'] = comparison_df['Stock_CV'].fillna(0).astype(int)
-            comparison_df['Stock_PV'] = comparison_df['Stock_PV'].fillna(0).astype(int)
-            comparison_df['Category'] = comparison_df['Category_CV'].fillna(comparison_df['Category_PV']).fillna("Uncategorized")
+            comparison_df = pd.merge(df_cv, df_pv, on="SKU", how="outer", suffixes=("_CV", "_PV"))
+            comparison_df["Full Name_CV"] = comparison_df["Full Name_CV"].fillna(comparison_df["Full Name_PV"])
+            comparison_df["Stock_CV"] = comparison_df["Stock_CV"].fillna(0).astype(int)
+            comparison_df["Stock_PV"] = comparison_df["Stock_PV"].fillna(0).astype(int)
+            comparison_df["Category"] = comparison_df.get("Category_CV", "").fillna(
+                comparison_df.get("Category_PV", "")
+            ).fillna("Uncategorized")
 
-            display_comp = comparison_df[['SKU','Full Name_CV','Category','Stock_CV','Stock_PV']].rename(
-                columns={'Full Name_CV':'Wig Name','Stock_CV':'Qty (Canape-Vert)','Stock_PV':'Qty (PV)'}
+            display_comp = comparison_df[["SKU", "Full Name_CV", "Category", "Stock_CV", "Stock_PV"]].rename(
+                columns={
+                    "Full Name_CV": "Wig Name",
+                    "Stock_CV": "Qty (Canape-Vert)",
+                    "Stock_PV": "Qty (PV)"
+                }
             )
 
             # ✅ Library-style search with unique key
@@ -49,7 +59,7 @@ def render_tab(container, supabase, username, role, loc_list, t):
             ).strip().lower()
             if comp_search:
                 display_comp = search_inventory(
-                    display_comp.rename(columns={'Wig Name':'Full Name'}),
+                    display_comp.rename(columns={"Wig Name": "Full Name"}),
                     comp_search
                 )
 

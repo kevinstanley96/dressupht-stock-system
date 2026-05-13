@@ -11,17 +11,33 @@ def render_tab(container, supabase, username, role, loc_list, t):
         master_inventory = pd.DataFrame(inv_query.data) if inv_query.data else pd.DataFrame()
 
         if not master_inventory.empty:
+            # ✅ Category selection
+            all_categories = sorted(master_inventory['Category'].dropna().unique().tolist())
+            selected_categories = st.multiselect(
+                "📂 Select Categories to Compare",
+                options=all_categories,
+                default=all_categories  # show all by default
+            )
+
             # PART A: SIDE-BY-SIDE COMPARISON
             st.subheader("Location Comparison (CV vs PV)")
-            df_cv = master_inventory[master_inventory['Location']=="Canape-Vert"][['SKU','Full Name','Stock','Category']]
-            df_pv = master_inventory[master_inventory['Location']=="Pv"][['SKU','Full Name','Stock']]
+            df_cv = master_inventory[
+                (master_inventory['Location']=="Canape-Vert") &
+                (master_inventory['Category'].isin(selected_categories))
+            ][['SKU','Full Name','Stock','Category']]
+
+            df_pv = master_inventory[
+                (master_inventory['Location']=="Pv") &
+                (master_inventory['Category'].isin(selected_categories))
+            ][['SKU','Full Name','Stock','Category']]
 
             comparison_df = pd.merge(df_cv, df_pv, on="SKU", how="outer", suffixes=('_CV','_PV'))
             comparison_df['Full Name_CV'] = comparison_df['Full Name_CV'].fillna(comparison_df['Full Name_PV'])
             comparison_df['Stock_CV'] = comparison_df['Stock_CV'].fillna(0).astype(int)
             comparison_df['Stock_PV'] = comparison_df['Stock_PV'].fillna(0).astype(int)
+            comparison_df['Category'] = comparison_df['Category_CV'].fillna(comparison_df['Category_PV']).fillna("Uncategorized")
 
-            display_comp = comparison_df[['SKU','Full Name_CV','Stock_CV','Stock_PV']].rename(
+            display_comp = comparison_df[['SKU','Full Name_CV','Category','Stock_CV','Stock_PV']].rename(
                 columns={'Full Name_CV':'Wig Name','Stock_CV':'Qty (Canape-Vert)','Stock_PV':'Qty (PV)'}
             )
 
